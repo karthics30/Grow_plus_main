@@ -54,7 +54,25 @@ interface Contact {
   source?: string;
   event?: string;
   score?: number;
+  // ✨ NEW FIELDS ADDED to match the template
+  "Updated By"?: string; // Use string for multi-word keys
+  "Status Date of Request"?: string;
+  Vertical?: string;
+  Customer?: string;
+  "End Client"?: string;
+  "Preferred Name"?: string;
+  Title?: string;
+  "Reporting Manager"?: string;
+  State?: string;
+  City?: string;
+  SPOC?: string;
+  "First Outreach Date"?: string;
+  "Last Outreach Date"?: string;
+  "Last Outreach Time"?: string;
+  "Next Outreach Date"?: string;
+  "Next Outreach Time"?: string;
 }
+// Note: When using multi-word keys like "Updated By", you must use quotes.
 
 // Define the structure for saved records in bulk upload (optional, based on your API response)
 interface SavedRecord {
@@ -326,6 +344,23 @@ const Contacts = () => {
         "source",
         "event",
         "score",
+        // 🚀 NEW FIELDS ADDED HERE (Ensure these match the keys used in UserEmailService mapping)
+        "Updated By",
+        "Status Date of Request",
+        "Vertical",
+        "Customer",
+        "End Client",
+        "Preferred Name",
+        "Title",
+        "Reporting Manager",
+        "State",
+        "City",
+        "SPOC",
+        "First Outreach Date",
+        "Last Outreach Date",
+        "Last Outreach Time",
+        "Next Outreach Date",
+        "Next Outreach Time",
       ],
     ];
     // Create worksheet and workbook (using XLSX from the reference code)

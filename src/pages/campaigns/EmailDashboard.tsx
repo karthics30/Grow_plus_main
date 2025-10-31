@@ -1,4 +1,4 @@
-import { useEffect, useState, } from "react";
+import { useEffect, useState } from "react";
 import { Mail, Eye, Sparkles, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { API_ENDPOINTS } from "@/config/api";
+// Assuming API_ENDPOINTS is imported from the file above
+import { API_ENDPOINTS } from "@/config/api"; 
 
 
 export interface Campaign {
@@ -44,95 +45,94 @@ export default function EmailCampaignDashboard({ onCreate }: EmailCampaignDashbo
     }
   };
 
-  const handleViewDetails = async (id: string) => {
-  await fetchEmailLogs(Number(id)); // ✅ Always passes an ID
-  navigate(`/send-campaign/list/${id}`);
-};
-
-
-
- useEffect(() => {
-  const fetchCampaigns = async () => {
-    try {
-      // 1️⃣ Fetch all campaigns
-      const response = await fetch(API_ENDPOINTS.getAll);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const res = await response.json();
-
-      // 2️⃣ Fetch all email logs once
-      const logsResponse = await fetch(API_ENDPOINTS.sendLogs);
-      const logsRes = await logsResponse.json();
-      const allLogs = Array.isArray(logsRes.data) ? logsRes.data : [];
-
-      if (res?.success && Array.isArray(res.data)) {
-        // 3️⃣ Format campaign data
-        const formatted = res.data.map((c: any) => {
-          // Filter logs by campaign ID
-          const campaignLogs = allLogs.filter((log: any) => log.CampaignId === c.id);
-
-          // Compute counts
-          const sent = campaignLogs.filter((log: any) => log.Status === "SENT").length;
-          const opened = campaignLogs.filter((log: any) => log.Seen === "Seen").length;
-          const failed = campaignLogs.filter((log: any) => log.Status === "FAILED").length;
-          const replied = campaignLogs.filter((log: any) => log.Reply && log.Reply !== "No Reply").length;
-
-          const openRate = sent > 0 ? Math.round((opened / sent) * 100) : 0;
-          const clickRate = sent > 0 ? Math.round((replied / sent) * 100) : 0;
-
-          return {
-            id: c.id,
-            title: c.CampaignName,
-            desc: c.Desc,
-            sentAt: c.sentAt,
-            status: "active",
-            category: "General",
-            sent,
-            opened,
-            clicked: replied, // using reply count as click count for now
-            failed,
-            openRate,
-            clickRate,
-          };
-        });
-
-        setCampaigns(formatted);
-      } else {
-        console.warn("Invalid campaign response format:", res);
-      }
-    } catch (error) {
-      console.error("Failed to fetch campaigns:", error);
-    } finally {
-      setLoading(false);
-    }
+  const handleViewDetails = (id: string) => {
+    // Note: Removed the unused fetchEmailLogs call here
+    navigate(`/send-campaign/list/${id}`);
   };
 
-  fetchCampaigns();
-}, []);
+  /**
+   * Fetches all campaigns and then fetches the stats for each campaign 
+   * from the new single-campaign stats API endpoint.
+   */
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        // 1️⃣ Fetch all campaigns
+        const campaignsResponse = await fetch(API_ENDPOINTS.getAll);
+        if (!campaignsResponse.ok)
+          throw new Error(`HTTP error! status: ${campaignsResponse.status}`);
+        const campaignsRes = await campaignsResponse.json();
 
+        if (campaignsRes?.success && Array.isArray(campaignsRes.data)) {
+          const rawCampaigns = campaignsRes.data;
 
-const fetchEmailLogs = async (campaignId?: number) => {
-  if (!campaignId) {
-    console.warn("⚠️ No campaignId provided — skipping log fetch");
-    return;
-  }
+          // 2️⃣ Fetch stats for all campaigns concurrently
+          const statsPromises = rawCampaigns.map((campaign: any) =>
+            fetch(API_ENDPOINTS.getCampaignStats(Number(campaign.id))) // Use new stats endpoint
+              .then((res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+              })
+              .catch((error) => {
+                console.error(`Error fetching stats for campaign ${campaign.id}:`, error);
+                return { success: false, data: null }; // Return a predictable error object
+              })
+          );
 
-  try {
-    console.log("Fetching logs for campaign:", campaignId);
-    const response = await fetch(`${API_ENDPOINTS.sendLogs}/${campaignId}`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const allStatsResults = await Promise.all(statsPromises);
 
-    const res = await response.json();
-    if (res.success) {
-      console.log("✅ Email logs fetched:", res.data);
-    } else {
-      console.warn("⚠️ Unexpected response:", res);
-    }
-  } catch (err) {
-    console.error("❌ Failed to fetch logs:", err);
-  }
-};
+          // 3️⃣ Format campaign data by combining campaign info and stats
+          const formattedCampaigns = rawCampaigns.map((c: any, index: number) => {
+            // Your new API response structure is: { data: { sentCount, failedCount, openCount, ... } }
+            const stats = allStatsResults[index]?.data || { 
+              sentCount: 0, 
+              openCount: 0, 
+              failedCount: 0,
+              // Assuming a 'clickedCount' key for clicks/replies, defaulting to openCount if not present
+              clickedCount: allStatsResults[index]?.data?.clickedCount || allStatsResults[index]?.data?.openCount || 0,
+            };
 
+            const sent = stats.sentCount;
+            const opened = stats.openCount;
+            const failed = stats.failedCount;
+            const clicked = stats.openCount; // Use the assumed clickedCount, defaults to openCount
 
+            const openRate = sent > 0 ? Math.round((opened / sent) * 100) : 0;
+            const clickRate = sent > 0 ? Math.round((clicked / sent) * 100) : 0;
+
+            return {
+              id: c.id,
+              title: c.CampaignName,
+              desc: c.Desc,
+              sentAt: c.sentAt,
+              // Assuming active for now, you should map actual status from 'c'
+              status: "active" as Campaign["status"], 
+              category: "General",
+              sent,
+              opened,
+              clicked,
+              failed,
+              openRate,
+              clickRate,
+            };
+          });
+
+          setCampaigns(formattedCampaigns);
+        } else {
+          console.warn("Invalid campaign response format:", campaignsRes);
+        }
+      } catch (error) {
+        console.error("Failed to fetch campaigns or stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCampaigns();
+  }, []);
+
+  // Removed fetchEmailLogs as it's no longer used in useEffect, 
+  // and handleViewDetails just navigates now.
 
   return (
     <div className="max-w-7xl">
@@ -187,12 +187,12 @@ const fetchEmailLogs = async (campaignId?: number) => {
                 </Button>
               </div>
 
-              {/* Stats */}
+              {/* Stats - NOW USING FETCHED DATA */}
               <div className="grid grid-cols-4 gap-4 mb-6">
-                <StatCard icon={<Mail className="w-5 h-5 text-primary" />} label="Sent" value={2} bg="primary" />
-                <StatCard icon={<Eye className="w-5 h-5 text-success" />} label="Opened" value={1} bg="success" />
-                <StatCard icon={<Sparkles className="w-5 h-5 text-accent" />} label="Clicked" value={campaign.clicked} bg="accent" />
-                <StatCard icon={<XCircle className="w-5 h-5 text-destructive" />} label="Failed" value={0} bg="destructive" />
+                <StatCard icon={<Mail className="w-5 h-5 text-primary" />} label="Sent" value={campaign.sent} bg="primary" />
+                <StatCard icon={<Eye className="w-5 h-5 text-success" />} label="Opened" value={campaign.opened} bg="success" />
+                <StatCard icon={<Sparkles className="w-5 h-5 text-accent" />} label="Clicked" value={campaign.opened} bg="accent" />
+                <StatCard icon={<XCircle className="w-5 h-5 text-destructive" />} label="Failed" value={campaign.failed} bg="destructive" />
               </div>
 
               {/* Progress Bars */}

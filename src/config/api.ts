@@ -26,4 +26,5 @@ export const API_ENDPOINTS = {
   updateContact: (id: string) => `${API_BASE_URL}/user-emails/update/${id}`,
   deleteContact: (id: string) => `${API_BASE_URL}/user-emails/delete/${id}`,
   getContact: (id) => `${API_BASE_URL}/user-emails/${id}`,
+  getCampaignStats: (id: number) => `${API_BASE_URL}/campaign/send-logs/stats/${id}`,
 };
