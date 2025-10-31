@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Lock } from "lucide-react";
-
+//comment added
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
