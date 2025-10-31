@@ -67,7 +67,7 @@ import CallHistory from "./pages/VoiceAgent/CallHistory/CallHistory";
 import Contacts from "./pages/Contacts";
 
 const queryClient = new QueryClient();
-
+//main barnacjs
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
