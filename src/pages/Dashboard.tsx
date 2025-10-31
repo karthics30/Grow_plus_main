@@ -738,7 +738,9 @@ const Dashboard = () => {
                                 {previewTemplate.attachments.map(
                                   (file: any, index: number) => {
                                     // Assuming your file structure and serving setup are correct for this path
-                                    const imageUrl = `http://localhost:3000/templates/${file.filename}`; 
+                                    const imageUrl = `${import.meta.env.VITE_API_BASE_URL}/templates/${file.filename}`; 
+
+                      
                                     return (
                                       <div
                                         key={index}

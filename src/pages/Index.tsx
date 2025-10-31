@@ -90,7 +90,7 @@ const Index = () => {
       setIsUploading(true);
 
       const response = await fetch(
-        "http://localhost:3000/api/user-emails/bulk-upload",
+        `${import.meta.env.VITE_API_BASE_URL}/user-emails/bulk-upload`,
         {
           method: "POST",
           body: formData,
