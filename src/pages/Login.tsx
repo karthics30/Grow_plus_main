@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Lock } from "lucide-react";
-//comment added
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,13 +23,19 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-//doneee
-    // Your allowed credentials
-    const validEmail = "groplus.team@gmail.com";
-    const validPassword = "GrowPlus@123";
+
+    // ✅ Allowed credentials
+    const allowedUsers = [
+      { email: "groplus.team@gmail.com", password: "GrowPlus@123" },
+      { email: "sales@myshrara.com", password: "Sales@123" },
+    ];
 
     setTimeout(() => {
-      if (email === validEmail && password === validPassword) {
+      const isValidUser = allowedUsers.some(
+        (user) => user.email === email && user.password === password
+      );
+
+      if (isValidUser) {
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userEmail", email);
         toast({

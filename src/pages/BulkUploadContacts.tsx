@@ -74,26 +74,45 @@ const BulkUploadContacts = ({ onUploadSuccess }: BulkUploadContactsProps) => {
 
   // 📄 Download template (headers only)
   const handleDownloadTemplate = () => {
-    const headers = [
+     const headers = [
       [
-        "Username",
-        "Address",
-        "Company",
-        "LinkedIn",
-        "Domain",
-        "Phone Number",
-        "Email",
-        "Country Code",
-        "Source",
-        "Event",
-        "Score",
+        "username",
+        "email",
+        "phonenumber",
+        "countryCode",
+        "company",
+        "domain",
+        "address",
+        "linkedIn",
+        "source",
+        "event",
+        "score",
+        // 🚀 NEW FIELDS ADDED HERE (Ensure these match the keys used in UserEmailService mapping)
+        "updatedBy",
+        "statusDateOfRequest",
+        "vertical",
+        "customer",
+        "endClient",
+        "preferredName",
+        "title",
+        "reportingManager",
+        "state",
+        "city",
+        "spoc",
+        "firstOutreachDate",
+        "lastOutreachDate",
+        "lastOutreachTime",
+        "nextOutreachDate",
+        "nextOutreachTime",
       ],
     ];
 
     const worksheet = XLSX.utils.aoa_to_sheet(headers);
+    console.log("wokspw",worksheet);
+    
     const workbook = XLSX.utils.book_new();
+    
     XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
-    XLSX.writeFile(workbook, "EmailContactsTemplate.xlsx");
   };
 
   return (

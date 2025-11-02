@@ -54,23 +54,22 @@ interface Contact {
   source?: string;
   event?: string;
   score?: number;
-  // ✨ NEW FIELDS ADDED to match the template
-  "Updated By"?: string; // Use string for multi-word keys
-  "Status Date of Request"?: string;
-  Vertical?: string;
-  Customer?: string;
-  "End Client"?: string;
-  "Preferred Name"?: string;
-  Title?: string;
-  "Reporting Manager"?: string;
-  State?: string;
-  City?: string;
-  SPOC?: string;
-  "First Outreach Date"?: string;
-  "Last Outreach Date"?: string;
-  "Last Outreach Time"?: string;
-  "Next Outreach Date"?: string;
-  "Next Outreach Time"?: string;
+  updatedBy?: string; // Use string for multi-word keys
+  statusDateOfRequest?: string;
+  vertical?: string;
+  customer?: string;
+  endClient?: string;
+  preferredName?: string;
+  title?: string;
+  reportingManager?: string;
+  state?: string;
+  city?: string;
+  spoc?: string;
+  firstOutreachDate?: string;
+  lastOutreachDate?: string;
+  lastOutreachTime?: string;
+  nextOutreachDate?: string;
+  nextOutreachTime?: string;
 }
 // Note: When using multi-word keys like "Updated By", you must use quotes.
 
@@ -124,18 +123,35 @@ const Contacts = () => {
   const fileInputRef = useRef<HTMLInputElement>(null); // ✅ Ref for hidden file input
 
   const [formData, setFormData] = useState({
-    username: "",
-    address: "",
-    company: "",
-    linkedIn: "",
-    domain: "",
-    phonenumber: "",
-    countryCode: "+1",
-    email: "",
-    source: "",
-    event: "",
-    score: "",
-  });
+  username: "",
+  address: "",
+  company: "",
+  linkedIn: "",
+  domain: "",
+  phonenumber: "",
+  countryCode: "+1",
+  email: "",
+  source: "",
+  event: "",
+  score: "",
+  updatedBy: "",
+  statusDateOfRequest: "",
+  vertical: "",
+  customer: "",
+  endClient: "",
+  preferredName: "",
+  title: "",
+  reportingManager: "",
+  state: "",
+  city: "",
+  spoc: "",
+  firstOutreachDate: "",
+  lastOutreachDate: "",
+  lastOutreachTime: "",
+  nextOutreachDate: "",
+  nextOutreachTime: "",
+});
+
 
   const filteredContacts = contacts.filter((contact) => {
     const matchesSearch =
@@ -212,6 +228,23 @@ const Contacts = () => {
       source: contact.source || "",
       event: contact.event || "",
       score: contact.score?.toString() || "",
+      updatedBy: contact.updatedBy || "",
+      statusDateOfRequest: contact.statusDateOfRequest || "",
+      vertical: contact.vertical || "",
+      customer: contact.customer || "",
+      endClient: contact.endClient || "",
+      preferredName: contact.preferredName || "",
+      title: contact.title || "",
+      reportingManager: contact.reportingManager || "",
+      state: contact.state || "",
+      city: contact.city || "",
+      spoc: contact.spoc || "",
+      firstOutreachDate: contact.firstOutreachDate || "",
+      lastOutreachDate: contact.lastOutreachDate || "",
+      lastOutreachTime: contact.lastOutreachTime || "",
+      nextOutreachDate: contact.nextOutreachDate || "",
+      nextOutreachTime: contact.nextOutreachTime || "",
+      
     });
     setIsEditDialogOpen(true);
   };
@@ -264,6 +297,23 @@ const Contacts = () => {
       event: contact.event || "",
       score: contact.score?.toString() || "",
       countryCode: contact.countryCode || "+1",
+      updatedBy: contact.updatedBy || "",
+      statusDateOfRequest: contact.statusDateOfRequest || "",
+      vertical: contact.vertical || "",
+      customer: contact.customer || "",
+      endClient: contact.endClient || "",
+      preferredName: contact.preferredName || "",
+      title: contact.title || "",
+      reportingManager: contact.reportingManager || "",
+      state: contact.state || "",
+      city: contact.city || "",
+      spoc: contact.spoc || "",
+      firstOutreachDate: contact.firstOutreachDate || "",
+      lastOutreachDate: contact.lastOutreachDate || "",
+      lastOutreachTime: contact.lastOutreachTime || "",
+      nextOutreachDate: contact.nextOutreachDate || "",
+      nextOutreachTime: contact.nextOutreachTime || "",
+
     });
     setIsViewDialogOpen(true);
   };
@@ -317,6 +367,23 @@ const Contacts = () => {
       source: "",
       event: "",
       score: "",
+      updatedBy: "",
+      statusDateOfRequest: "",
+      vertical: "",
+      customer: "",
+      endClient: "",
+      preferredName: "",
+      title: "",
+      reportingManager: "",
+      state: "",
+      city: "",
+      spoc: "",
+      firstOutreachDate: "",
+      lastOutreachDate: "",
+      lastOutreachTime: "",
+      nextOutreachDate: "",
+      nextOutreachTime: "",
+
     });
   };
 
@@ -345,22 +412,22 @@ const Contacts = () => {
         "event",
         "score",
         // 🚀 NEW FIELDS ADDED HERE (Ensure these match the keys used in UserEmailService mapping)
-        "Updated By",
-        "Status Date of Request",
-        "Vertical",
-        "Customer",
-        "End Client",
-        "Preferred Name",
-        "Title",
-        "Reporting Manager",
-        "State",
-        "City",
-        "SPOC",
-        "First Outreach Date",
-        "Last Outreach Date",
-        "Last Outreach Time",
-        "Next Outreach Date",
-        "Next Outreach Time",
+        "updatedBy",
+        "statusDateOfRequest",
+        "vertical",
+        "customer",
+        "endClient",
+        "preferredName",
+        "title",
+        "reportingManager",
+        "state",
+        "city",
+        "spoc",
+        "firstOutreachDate",
+        "lastOutreachDate",
+        "lastOutreachTime",
+        "nextOutreachDate",
+        "nextOutreachTime",
       ],
     ];
     // Create worksheet and workbook (using XLSX from the reference code)
@@ -395,75 +462,82 @@ const Contacts = () => {
   };
 
   // 3. Upload File Handler
-  const handleBulkUpload = async () => {
-    if (!uploadedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please choose a file before uploading.",
-        variant: "destructive",
-      });
-      return;
+const handleBulkUpload = async () => {
+  if (!uploadedFile) {
+    toast({
+      title: "No file selected",
+      description: "Please choose a file before uploading.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", uploadedFile);
+console.log("uolDSDA",uploadedFile);
+
+  // ✅ Log all data being sent to backend
+  console.log("📦 FormData being sent:");
+  for (let [key, value] of formData.entries()) {
+
+    if (value instanceof File) {
+      console.log(`${key}:`, value.name, `(File size: ${value.size} bytes)`);
+    } else {
+      console.log(`${key}:`, value);
+    }
+  }
+
+  try {
+    setIsUploading(true);
+
+    const response = await fetch(API_ENDPOINTS.bulkupload, {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Bulk upload failed on the server.");
     }
 
-    const formData = new FormData();
-    formData.append("file", uploadedFile);
-
-    try {
-      setIsUploading(true);
-
-      // ⚠️ IMPORTANT: Replace this with your actual bulk upload API endpoint
-      const response = await fetch(API_ENDPOINTS.bulkupload, {
-        method: "POST",
-        // The 'Content-Type' header is usually omitted when sending FormData,
-        // as the browser sets it to 'multipart/form-data' automatically, including the boundary.
-        body: formData,
+    if (result.success > 0 && result.failed === 0) {
+      toast({
+        title: "✅ Upload Successful",
+        description: `${result.success} contact(s) added successfully.`,
       });
-
-      // Assuming your API returns a JSON response like { success: 10, failed: 2, errors: [...] }
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Bulk upload failed on the server.");
-      }
-
-      // Handle toast based on API response (similar to the reference code's logic)
-      if (result.success > 0 && result.failed === 0) {
-        toast({
-          title: "✅ Upload Successful",
-          description: `${result.success} contact(s) added successfully.`,
-        });
-      } else if (result.success > 0 || result.failed > 0) {
-        toast({
-          title: "⚠️ Partial Upload",
-          description: `✅ ${result.success} added | ❌ ${result.failed} failed.`,
-          variant: "default", // Or a custom 'partial' variant
-        });
-      } else {
-        toast({
-          title: "❌ Upload Failed",
-          description:
-            result.errors?.[0] || "No contacts were added. Check file format.",
-          variant: "destructive",
-        });
-      }
-
-      setUploadedFile(null);
-      setIsBulkUploadDialogOpen(false);
-      fetchContacts(); // Refresh the contact list
-    } catch (error) {
-      console.error("Bulk Upload Error:", error);
+    } else if (result.success > 0 || result.failed > 0) {
+      toast({
+        title: "⚠️ Partial Upload",
+        description: `✅ ${result.success} added | ❌ ${result.failed} failed.`,
+      });
+    } else {
       toast({
         title: "❌ Upload Failed",
         description:
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while uploading.",
+          result.errors?.[0] || "No contacts were added. Check file format.",
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
     }
-  };
+
+    setUploadedFile(null);
+    setIsBulkUploadDialogOpen(false);
+    fetchContacts();
+  } catch (error) {
+    console.error("Bulk Upload Error:", error);
+    toast({
+      title: "❌ Upload Failed",
+      description:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while uploading.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsUploading(false);
+  }
+};
+
 
   // --- 💻 Render Section ---
 
@@ -709,16 +783,21 @@ const Contacts = () => {
 
       {/* ... (existing Add, Edit, View, Delete Dialogs) ... */}
       {/* ✅ Add Contact Dialog */}
+      
+
+      {/* ✅ Add Contact Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        {/* ... (Add Contact Dialog Content) ... */}
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* ... (DialogHeader) ... */}
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Contact</DialogTitle>
             <DialogDescription>
               Enter the contact details below
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          {/* Increased grid to cols-3 for better layout of many fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
+            {/* Existing Fields */}
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -747,7 +826,7 @@ const Contacts = () => {
                     setFormData({ ...formData, countryCode: value })
                   }
                 >
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-[100px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -794,7 +873,7 @@ const Contacts = () => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2 col-span-3">
               <Label htmlFor="linkedIn">LinkedIn</Label>
               <Input
                 id="linkedIn"
@@ -832,6 +911,160 @@ const Contacts = () => {
                 onChange={handleInputChange}
               />
             </div>
+            
+            {/* 🚀 NEW FIELDS ADDED HERE */}
+            <div className="space-y-2">
+              <Label htmlFor="updatedBy">Updated By</Label>
+              <Input
+                id="updatedBy"
+                name="updatedBy"
+                value={formData.updatedBy}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="statusDateOfRequest">Status Date of Request</Label>
+              <Input
+                id="statusDateOfRequest"
+                name="statusDateOfRequest"
+                type="date"
+                value={formData.statusDateOfRequest}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vertical">Vertical</Label>
+              <Input
+                id="vertical"
+                name="vertical"
+                value={formData.vertical}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer">Customer</Label>
+              <Input
+                id="customer"
+                name="customer"
+                value={formData.customer}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endClient">End Client</Label>
+              <Input
+                id="endClient"
+                name="endClient"
+                value={formData.endClient}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="preferredName">Preferred Name</Label>
+              <Input
+                id="preferredName"
+                name="preferredName"
+                value={formData.preferredName}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reportingManager">Reporting Manager</Label>
+              <Input
+                id="reportingManager"
+                name="reportingManager"
+                value={formData.reportingManager}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="state">State</Label>
+              <Input
+                id="state"
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="spoc">SPOC</Label>
+              <Input
+                id="spoc"
+                name="spoc"
+                value={formData.spoc}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="firstOutreachDate">First Outreach Date</Label>
+              <Input
+                id="firstOutreachDate"
+                name="firstOutreachDate"
+                type="date"
+                value={formData.firstOutreachDate}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastOutreachDate">Last Outreach Date</Label>
+              <Input
+                id="lastOutreachDate"
+                name="lastOutreachDate"
+                type="date"
+                value={formData.lastOutreachDate}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastOutreachTime">Last Outreach Time</Label>
+              <Input
+                id="lastOutreachTime"
+                name="lastOutreachTime"
+                type="time"
+                value={formData.lastOutreachTime}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nextOutreachDate">Next Outreach Date</Label>
+              <Input
+                id="nextOutreachDate"
+                name="nextOutreachDate"
+                type="date"
+                value={formData.nextOutreachDate}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nextOutreachTime">Next Outreach Time</Label>
+              <Input
+                id="nextOutreachTime"
+                name="nextOutreachTime"
+                type="time"
+                value={formData.nextOutreachTime}
+                onChange={handleInputChange}
+              />
+            </div>
+            {/* End NEW FIELDS */}
+
           </div>
           <DialogFooter>
             <Button
@@ -848,9 +1081,11 @@ const Contacts = () => {
         </DialogContent>
       </Dialog>
       {/* ✅ Edit Contact Dialog */}
+
+      {/* ✅ Edit Contact Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         {" "}
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {" "}
           <DialogHeader>
             {" "}
@@ -859,8 +1094,10 @@ const Contacts = () => {
               Update the contact details below
             </DialogDescription>{" "}
           </DialogHeader>{" "}
-          <div className="grid grid-cols-2 gap-4 py-4">
+          {/* Increased grid to cols-3 for better layout of many fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
             {" "}
+            {/* Existing Fields */}
             <div className="space-y-2">
               {" "}
               <Label htmlFor="edit-username">Username</Label>{" "}
@@ -894,7 +1131,7 @@ const Contacts = () => {
                   }
                 >
                   {" "}
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-[100px]">
                     {" "}
                     <SelectValue />{" "}
                   </SelectTrigger>{" "}
@@ -947,7 +1184,7 @@ const Contacts = () => {
                 onChange={handleInputChange}
               />{" "}
             </div>{" "}
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2 col-span-3">
               {" "}
               <Label htmlFor="edit-linkedIn">LinkedIn</Label>{" "}
               <Input
@@ -989,9 +1226,162 @@ const Contacts = () => {
                 onChange={handleInputChange}
               />{" "}
             </div>{" "}
+            
+            {/* 🚀 NEW FIELDS ADDED HERE */}
+            <div className="space-y-2">
+              <Label htmlFor="updatedBy">Updated By</Label>
+              <Input
+                id="updatedBy"
+                name="updatedBy"
+                value={formData.updatedBy}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="statusDateOfRequest">Status Date of Request</Label>
+              <Input
+                id="statusDateOfRequest"
+                name="statusDateOfRequest"
+                type="date"
+                value={formData.statusDateOfRequest}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vertical">Vertical</Label>
+              <Input
+                id="edit-vertical"
+                name="vertical"
+                value={formData.vertical}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer">Customer</Label>
+              <Input
+                id="customer"
+                name="customer"
+                value={formData.customer}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endClient">End Client</Label>
+              <Input
+                id="endClient"
+                name="endClient"
+                value={formData.endClient}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="preferredName">Preferred Name</Label>
+              <Input
+                id="preferredName"
+                name="preferredName"
+                value={formData.preferredName}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reportingManager">Reporting Manager</Label>
+              <Input
+                id="reportingManager"
+                name="reportingManager"
+                value={formData.reportingManager}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="state">State</Label>
+              <Input
+                id="state"
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="spoc">SPOC</Label>
+              <Input
+                id="spoc"
+                name="spoc"
+                value={formData.spoc}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="firstOutreachDate">First Outreach Date</Label>
+              <Input
+                id="firstOutreachDate"
+                name="firstOutreachDate"
+                type="date"
+                value={formData.firstOutreachDate}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastOutreachDate">Last Outreach Date</Label>
+              <Input
+                id="lastOutreachDate"
+                name="lastOutreachDate"
+                type="date"
+                value={formData.lastOutreachDate}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastOutreachTime">Last Outreach Time</Label>
+              <Input
+                id="lastOutreachTime"
+                name="lastOutreachTime"
+                type="time"
+                value={formData.lastOutreachTime}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nextOutreachDate">Next Outreach Date</Label>
+              <Input
+                id="nextOutreachDate"
+                name="nextOutreachDate"
+                type="date"
+                value={formData.nextOutreachDate}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nextOutreachTime">Next Outreach Time</Label>
+              <Input
+                id="nextOutreachTime"
+                name="nextOutreachTime"
+                type="time"
+                value={formData.nextOutreachTime}
+                onChange={handleInputChange}
+              />
+            </div>
+            {/* End NEW FIELDS */}
+            
           </div>{" "}
           <DialogFooter>
-            {" "}
             <Button
               variant="outline"
               onClick={() => {
@@ -1001,11 +1391,12 @@ const Contacts = () => {
               }}
             >
               Cancel
-            </Button>{" "}
-            <Button onClick={handleUpdateContact}>Update Contact</Button>{" "}
-          </DialogFooter>{" "}
-        </DialogContent>{" "}
+            </Button>
+            <Button onClick={handleUpdateContact}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
+      {/* ... (rest of the code) ... */}
       {/* ✅ View Contact Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         {" "}
@@ -1032,6 +1423,22 @@ const Contacts = () => {
                 { label: "Source", key: "source" },
                 { label: "Event", key: "event" },
                 { label: "Score", key: "score" },
+                { label: "Updated By", key: "updatedBy" },
+                { label: "Status Date of Request", key: "statusDateOfRequest" },
+                { label: "Vertical", key: "vertical" }, 
+                { label: "Customer", key: "customer" },
+                { label: "End Client", key: "endClient" },
+                { label: "Preferred Name", key: "preferredName" },
+                { label: "Title", key: "title" }, 
+                { label: "Reporting Manager", key: "reportingManager" },
+                { label: "State", key: "state" },
+                { label: "City", key: "city" },
+                { label: "SPOC", key: "spoc" },
+                { label: "First Outreach Date", key: "firstOutreachDate" },
+                { label: "Last Outreach Date", key: "lastOutreachDate" },
+                { label: "Last Outreach Time", key: "lastOutreachTime" },
+                { label: "Next Outreach Date", key: "nextOutreachDate" },
+                { label: "Next Outreach Time", key: "nextOutreachTime" },
               ].map(({ label, key }) => (
                 <div key={key} className="space-y-2">
                   {" "}
@@ -1069,6 +1476,30 @@ const Contacts = () => {
                       event: selectedContact?.event || "",
                       score: selectedContact?.score?.toString() || "",
                       countryCode: selectedContact?.countryCode || "+1",
+                      updatedBy: selectedContact?.updatedBy || "",
+                      statusDateOfRequest:
+                        selectedContact?.statusDateOfRequest || "",
+                      vertical: selectedContact?.vertical || "",
+                      customer: selectedContact?.customer || "",
+                      endClient: selectedContact?.endClient || "",
+                      preferredName: selectedContact?.preferredName || "",
+                      title: selectedContact?.title || "",
+                      reportingManager:
+                        selectedContact?.reportingManager || "",
+                      state: selectedContact?.state || "",
+                      city: selectedContact?.city || "",
+                      spoc: selectedContact?.spoc || "",
+                      firstOutreachDate:
+                        selectedContact?.firstOutreachDate || "",
+                      lastOutreachDate:
+                        selectedContact?.lastOutreachDate || "",
+                      lastOutreachTime:
+                        selectedContact?.lastOutreachTime || "",
+                      nextOutreachDate:
+                        selectedContact?.nextOutreachDate || "",
+                      nextOutreachTime:
+                        selectedContact?.nextOutreachTime || "",
+
                     });
                   }}
                 >

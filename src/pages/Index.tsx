@@ -228,46 +228,7 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-2">
-            <Button
-              onClick={handleFileClick}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Choose File
-            </Button>
-
-            <Button
-              onClick={handleUpload}
-              disabled={!uploadedFile || isUploading}
-              className="bg-green-600 text-white hover:bg-green-700 rounded-lg px-4 py-2 shadow-sm transition"
-            >
-              {isUploading ? "Uploading..." : "Upload"}
-            </Button>
-
-            <Button
-              onClick={handleDownloadTemplate}
-              className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg px-4 py-2 shadow-sm transition"
-            >
-              Download Template
-            </Button>
-          </div>
-
-          {uploadedFile && (
-            <p className="text-sm text-muted-foreground">
-              Selected: {uploadedFile.name}
-            </p>
-          )}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.xlsx,.pdf"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </div>
+       
       </div>
 
       {/* Stats Cards */}
