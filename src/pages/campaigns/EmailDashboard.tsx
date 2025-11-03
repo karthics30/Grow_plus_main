@@ -173,9 +173,9 @@ export default function EmailCampaignDashboard({ onCreate }: EmailCampaignDashbo
                   <Badge variant={getStatusVariant(campaign.status)} className="capitalize">
                     {campaign.status}
                   </Badge>
-                  <Badge variant="outline" className="text-muted-foreground">
+                  {/* <Badge variant="outline" className="text-muted-foreground">
                     {campaign.category || "General"}
-                  </Badge>
+                  </Badge> */}
                 </div>
                 <Button
                   variant="outline"
@@ -196,10 +196,10 @@ export default function EmailCampaignDashboard({ onCreate }: EmailCampaignDashbo
               </div>
 
               {/* Progress Bars */}
-              <div className="space-y-4">
+              {/* <div className="space-y-4">
                 <ProgressRow label="Open Rate" value={campaign.openRate} />
                 <ProgressRow label="Click Rate" value={campaign.clickRate} />
-              </div>
+              </div> */}
             </div>
           ))}
         </div>

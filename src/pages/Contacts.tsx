@@ -464,6 +464,7 @@ const [selectedSource, setSelectedSource] = useState("all");
         "email",
         "countrycode",
         "workphone",
+        "mobilecountrycode",
         "mobile",
         "vertical",
         "company",
@@ -476,10 +477,10 @@ const [selectedSource, setSelectedSource] = useState("all");
         "source",
         "address",
         "notes",
-        "outreachdate",
-        "updatedby",
         "leadstatus",
         "isactive",
+        "outreachdate",
+        "updatedby",
       ],
     ];
     // Create worksheet and workbook (using XLSX from the reference code)

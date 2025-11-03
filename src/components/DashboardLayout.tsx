@@ -18,10 +18,10 @@ const DashboardLayout = () => {
   };
 
   const navItems = [
-    { label: "Dashboard", path: "/index", icon: Home },
-    { label: "Templates", path: "/dashboard", icon: FileText },
+    // { label: "Dashboard", path: "/index", icon: Home },
+   { label: "Templates", path: "/dashboard", icon: FileText },
     { label: "Email Campaigns", path: "/send-campaign", icon: Send },
-    { label: "voice agent", path: "/voice-agent", icon: Phone },
+    // { label: "voice agent", path: "/voice-agent", icon: Phone },
     { path: "/contacts", label: "Contacts", icon: Users },
   ];
 
