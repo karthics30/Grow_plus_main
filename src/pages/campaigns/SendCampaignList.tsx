@@ -85,9 +85,9 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
         const processedLogs = (logsData.data || []).map((log: SendLog) => ({
           ...log,
           firstOpenedAt:
-            log.openCount && log.openCount > 0 ? log.firstOpenedAt : null,
+            log.openCount && log.openCount > 1 ? log.firstOpenedAt : null,
           lastOpenedAt:
-            log.openCount && log.openCount > 0 ? log.lastOpenedAt : null,
+            log.openCount && log.openCount > 1 ? log.lastOpenedAt : null,
         }));
         setLogs(processedLogs);
       } else {
@@ -214,7 +214,7 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
                         <TableCell>{log.templateName}</TableCell>
                         <TableCell>{log.subject}</TableCell>
                         <TableCell>
-                          {log.openCount > 0 ? (
+                          {log.openCount > 1 ? (
                             <span className="text-green-600 font-medium">
                               Seen
                             </span>
