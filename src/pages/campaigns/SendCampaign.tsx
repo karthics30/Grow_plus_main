@@ -41,6 +41,8 @@ interface User {
   id: number;
   username: string;
   email: string;
+  businessname?: string;
+  company?: string;
 }
 
 const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
@@ -53,7 +55,12 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
   const [customSubject, setCustomSubject] = useState("");
   const [customText, setCustomText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+
+  // ✅ Filters (now dropdown-based)
+  const [businessNameFilter, setBusinessNameFilter] = useState("all");
+  const [emailFilter, setEmailFilter] = useState("all");
+  const [companyFilter, setCompanyFilter] = useState("all");
+
   const { toast } = useToast();
 
   /* --------------------------- Fetch all initial data --------------------------- */
@@ -77,47 +84,42 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
     }
   };
 
- // ✅ Fetch templates dynamically by selected campaign
-const fetchTemplatesByCampaign = async (campaignId: number) => {
-  try {
-    const response = await fetch(`${API_ENDPOINTS.listTemplates}?campaignId=${campaignId}`);
-    const data = await response.json();
+  // ✅ Fetch templates dynamically by selected campaign
+  const fetchTemplatesByCampaign = async (campaignId: number) => {
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.listTemplates}?campaignId=${campaignId}`
+      );
+      const data = await response.json();
 
-    console.log("🎯 Templates raw response:", data);
+      const templatesArray = Array.isArray(data.data?.data)
+        ? data.data.data
+        : Array.isArray(data.data)
+        ? data.data
+        : [];
 
-    // ✅ Handle nested data safely
-    const templatesArray = Array.isArray(data.data?.data)
-      ? data.data.data
-      : Array.isArray(data.data)
-      ? data.data
-      : [];
+      setTemplates(templatesArray);
 
-    console.log("✅ Extracted templates:", templatesArray);
-    setTemplates(templatesArray);
-
-    // Optional toast feedback
-    if (templatesArray.length > 0) {
+      if (templatesArray.length > 0) {
+        toast({
+          title: "Templates Loaded",
+          description: `${templatesArray.length} template(s) found for this campaign.`,
+        });
+      } else {
+        toast({
+          title: "No Templates Found",
+          description: "No templates are linked to this campaign.",
+        });
+      }
+    } catch (err) {
+      console.error("❌ Error fetching templates:", err);
       toast({
-        title: "Templates Loaded",
-        description: `${templatesArray.length} template(s) found for this campaign.`,
-      });
-    } else {
-      toast({
-        title: "No Templates Found",
-        description: "No templates are linked to this campaign.",
+        title: "Error",
+        description: "Failed to fetch templates for this campaign.",
+        variant: "destructive",
       });
     }
-  } catch (err) {
-    console.error("❌ Error fetching templates:", err);
-    toast({
-      title: "Error",
-      description: "Failed to fetch templates for this campaign.",
-      variant: "destructive",
-    });
-  }
-};
-
-
+  };
 
   // ✅ Fetch users
   const fetchUsers = async () => {
@@ -235,11 +237,18 @@ const fetchTemplatesByCampaign = async (campaignId: number) => {
   const handleRemoveRecipient = (email: string) =>
     setRecipients((prev) => prev.filter((r) => r.email !== email));
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ Apply dropdown filters (AND-based)
+  const filteredUsers = users.filter((user) => {
+    const matchBusiness =
+      businessNameFilter === "all" ||
+      !businessNameFilter ||
+      user.businessname === businessNameFilter;
+    const matchEmail =
+      emailFilter === "all" || !emailFilter || user.email === emailFilter;
+    const matchCompany =
+      companyFilter === "all" || !companyFilter || user.company === companyFilter;
+    return matchBusiness && matchEmail && matchCompany;
+  });
 
   const isAllSelected = recipients.length === users.length && users.length > 0;
   const isButtonDisabled =
@@ -342,14 +351,90 @@ const fetchTemplatesByCampaign = async (campaignId: number) => {
                 Recipients
               </Label>
 
-              <Input
-                placeholder="Search users by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-2"
-              />
+              {/* ✅ Dropdown Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                {/* Business Name Filter */}
+                <div>
+                  <Label className="text-sm">Business Name</Label>
+                  <Select
+                    value={businessNameFilter}
+                    onValueChange={setBusinessNameFilter}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by business name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {[...new Set(
+                        users.map((u) => u.businessname).filter(Boolean)
+                      )].map((bn) => (
+                        <SelectItem key={bn} value={bn}>
+                          {bn}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="border rounded-md p-3 max-h-60 overflow-y-auto bg-muted/30">
+                {/* Email Filter */}
+                <div>
+                  <Label className="text-sm">Email</Label>
+                  <Select value={emailFilter} onValueChange={setEmailFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by email" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {[...new Set(
+                        users.map((u) => u.email).filter(Boolean)
+                      )].map((email) => (
+                        <SelectItem key={email} value={email}>
+                          {email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Company Filter */}
+                <div>
+                  <Label className="text-sm">Company</Label>
+                  <Select
+                    value={companyFilter}
+                    onValueChange={setCompanyFilter}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {[...new Set(
+                        users.map((u) => u.company).filter(Boolean)
+                      )].map((company) => (
+                        <SelectItem key={company} value={company}>
+                          {company}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Clear Filters Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBusinessNameFilter("all");
+                  setEmailFilter("all");
+                  setCompanyFilter("all");
+                }}
+              >
+                Clear Filters
+              </Button>
+
+              {/* User List */}
+              <div className="border rounded-md p-3 max-h-60 overflow-y-auto bg-muted/30 mt-3">
                 <div className="flex items-center space-x-2 mb-2 border-b pb-2">
                   <input
                     type="checkbox"
@@ -384,7 +469,8 @@ const fetchTemplatesByCampaign = async (campaignId: number) => {
                           htmlFor={`user-${user.id}`}
                           className="cursor-pointer text-sm"
                         >
-                          {user.username}
+                          {user.username} — {user.email} —{" "}
+                          {user.businessname || "N/A"}
                         </Label>
                       </div>
                     );
@@ -433,11 +519,7 @@ const fetchTemplatesByCampaign = async (campaignId: number) => {
             </div>
 
             {/* Send Button */}
-            <Button
-              type="submit"
-              disabled={isButtonDisabled}
-              className="w-full"
-            >
+            <Button type="submit" disabled={isButtonDisabled} className="w-full">
               {isSending
                 ? "Sending..."
                 : `Send Campaign to ${recipients.length} Recipient${

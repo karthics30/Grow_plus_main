@@ -201,7 +201,7 @@ const Index = () => {
       "Username",
       "Address",
       "Company",
-      "LinkedIn",
+      "linkedin",
       "Domain",
       "Phone Number",
       "Email",
@@ -243,7 +243,7 @@ const Index = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">12,543</div>
+            <div className="text-3xl font-bold text-foreground">0</div>
             <p className="text-xs text-success mt-1">+12% from last month</p>
           </CardContent>
         </Card>
@@ -258,7 +258,7 @@ const Index = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">24</div>
+            <div className="text-3xl font-bold text-foreground">0</div>
             <p className="text-xs text-success mt-1">+3 from last month</p>
           </CardContent>
         </Card>
@@ -273,7 +273,7 @@ const Index = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">34.2%</div>
+            <div className="text-3xl font-bold text-foreground">0</div>
             <p className="text-xs text-success mt-1">+5.1% from last month</p>
           </CardContent>
         </Card>

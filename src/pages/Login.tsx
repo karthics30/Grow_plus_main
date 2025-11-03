@@ -63,7 +63,7 @@ const Login = () => {
               <Mail className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold">Email Campaign Manager</CardTitle>
+          <CardTitle className="text-3xl font-bold">Lynksapp CRM</CardTitle>
           <CardDescription>Sign in to manage your email campaigns</CardDescription>
         </CardHeader>
         <CardContent>

@@ -40,36 +40,37 @@ import { useToast } from "@/hooks/use-toast";
 import { API_ENDPOINTS } from "@/config/api";
 import { Plus, Edit, Eye, Trash2, Upload, FileDown } from "lucide-react"; // Added Upload and FileDown icons
 import * as XLSX from "xlsx"; // Import for Excel/Template handling
+import { count } from "console";
+import { endOfDay } from "date-fns";
+import { report } from "process";
+import { stat } from "fs";
 
 interface Contact {
   id: string;
+  businessname: string;
+  firstname: string;
+  lastname: string;
   username: string;
-  address: string;
-  company?: string;
-  linkedIn?: string;
-  domain?: string;
-  phonenumber: string;
-  countryCode?: string;
-  email: string;
-  source?: string;
-  event?: string;
-  score?: number;
-  updatedBy?: string; // Use string for multi-word keys
-  statusDateOfRequest?: string;
-  vertical?: string;
-  customer?: string;
-  endClient?: string;
-  preferredName?: string;
   title?: string;
-  reportingManager?: string;
+  email: string;
+  countrycode?: string;
+  workphone?: string;
+  mobile?: string;
+  vertical?: string;
+  company?: string;
+  endclient?: string;
+  reportingmanager?: string;
+  country?: string;
   state?: string;
   city?: string;
-  spoc?: string;
-  firstOutreachDate?: string;
-  lastOutreachDate?: string;
-  lastOutreachTime?: string;
-  nextOutreachDate?: string;
-  nextOutreachTime?: string;
+  linkedin?: string;
+  source?: string;
+  address: string;
+  notes?: string;
+  outreachdate?: string;
+  updatedby?: string;
+  leadstatus?: string;
+  isactive?: boolean;
 }
 // Note: When using multi-word keys like "Updated By", you must use quotes.
 
@@ -117,55 +118,63 @@ const Contacts = () => {
   const [selectedCompany, setSelectedCompany] = useState("all");
   const [selectedDomain, setSelectedDomain] = useState("all");
 
+  const [selectedBusiness, setSelectedBusiness] = useState("all");
+const [selectedSource, setSelectedSource] = useState("all");
+
+
   // State for Bulk Upload
   const [uploadedFile, setUploadedFile] = useState<File | null>(null); // ✅ New state for file
   const [isUploading, setIsUploading] = useState(false); // ✅ New state for upload status
   const fileInputRef = useRef<HTMLInputElement>(null); // ✅ Ref for hidden file input
 
   const [formData, setFormData] = useState({
-  username: "",
-  address: "",
-  company: "",
-  linkedIn: "",
-  domain: "",
-  phonenumber: "",
-  countryCode: "+1",
-  email: "",
-  source: "",
-  event: "",
-  score: "",
-  updatedBy: "",
-  statusDateOfRequest: "",
-  vertical: "",
-  customer: "",
-  endClient: "",
-  preferredName: "",
-  title: "",
-  reportingManager: "",
-  state: "",
-  city: "",
-  spoc: "",
-  firstOutreachDate: "",
-  lastOutreachDate: "",
-  lastOutreachTime: "",
-  nextOutreachDate: "",
-  nextOutreachTime: "",
-});
-
+    businessname: "",
+    firstname: "",
+    lastname: "",
+    username: "",
+    title: "",
+    email: "",
+    countrycode: "+1",
+    workphone: "",
+    mobile: "",
+    vertical: "",
+    company: "",
+    endclient: "",
+    reportingmanager: "",
+    country: "",
+    state: "",
+    city: "",
+    linkedin: "",
+    source: "",
+    address: "",
+    notes: "",
+    outreachdate: "",
+    updatedby: "",
+    leadstatus: "",
+    isactive: true,
+  });
 
   const filteredContacts = contacts.filter((contact) => {
     const matchesSearch =
       contact.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.phonenumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      contact.mobile?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesCompany =
       selectedCompany === "all" || contact.company === selectedCompany;
 
     const matchesDomain =
-      selectedDomain === "all" || contact.domain === selectedDomain;
+      selectedDomain === "all" || contact.title === selectedDomain;
 
-    return matchesSearch && matchesCompany && matchesDomain;
+      const matchesBusiness =
+    selectedBusiness === "all" || contact.businessname === selectedBusiness;
+
+  const matchesSource =
+    selectedSource === "all" || contact.source === selectedSource;
+
+    return matchesSearch && matchesCompany && matchesDomain &&
+    matchesBusiness &&
+    matchesSource;
   });
 
   useEffect(() => {
@@ -187,133 +196,181 @@ const Contacts = () => {
     }
   };
 
+
+  const REQUIRED_FIELDS = [
+  "businessname",
+  "firstname",
+  "title",
+  "email",
+  "workphone",
+  "mobile",
+  "vertical",
+  "company",
+  "country",
+  "source",
+];
+
   const handleAddContact = async () => {
-    try {
-      const response = await fetch(API_ENDPOINTS.createContact, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+  // ✅ Validate required fields
+  const missingFields = REQUIRED_FIELDS.filter(
+    (field) => !formData[field as keyof typeof formData]?.toString().trim()
+  );
 
-      if (!response.ok) throw new Error("Failed to create contact");
+  if (missingFields.length > 0) {
+    toast({
+      variant: "destructive",
+      title: "Missing Required Fields",
+      description: `Please fill in all required fields: ${missingFields
+        .map((f) => f.charAt(0).toUpperCase() + f.slice(1))
+        .join(", ")}`,
+    });
+    return;
+  }
 
-      toast({
-        title: "Success",
-        description: "Contact created successfully",
-      });
+  // ✅ Remove empty fields before sending
+  const cleanedData = Object.fromEntries(
+    Object.entries(formData).filter(([_, value]) => {
+      if (typeof value === "string") return value.trim() !== "";
+      return value !== null && value !== undefined;
+    })
+  );
 
-      setIsAddDialogOpen(false);
-      resetForm();
-      fetchContacts();
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to create contact",
-      });
-    }
-  };
+  try {
+    const response = await fetch(API_ENDPOINTS.createContact, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cleanedData),
+    });
+
+    if (!response.ok) throw new Error("Failed to create contact");
+
+    toast({
+      title: "Success",
+      description: "Contact created successfully",
+    });
+
+    setIsAddDialogOpen(false);
+    resetForm();
+    fetchContacts();
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to create contact",
+    });
+  }
+};
 
   const handleEditClick = (contact: Contact) => {
     setSelectedContact(contact);
     setFormData({
+      businessname: contact.businessname,
+      firstname: contact.firstname,
+      lastname: contact.lastname,
       username: contact.username,
-      address: contact.address,
-      company: contact.company || "",
-      linkedIn: contact.linkedIn || "",
-      domain: contact.domain || "",
-      phonenumber: contact.phonenumber,
-      countryCode: contact.countryCode || "+1",
-      email: contact.email,
-      source: contact.source || "",
-      event: contact.event || "",
-      score: contact.score?.toString() || "",
-      updatedBy: contact.updatedBy || "",
-      statusDateOfRequest: contact.statusDateOfRequest || "",
-      vertical: contact.vertical || "",
-      customer: contact.customer || "",
-      endClient: contact.endClient || "",
-      preferredName: contact.preferredName || "",
       title: contact.title || "",
-      reportingManager: contact.reportingManager || "",
+      email: contact.email,
+      countrycode: contact.countrycode || "+1",
+      workphone: contact.workphone || "",
+      mobile: contact.mobile || "",
+      vertical: contact.vertical || "",
+      company: contact.company || "",
+      endclient: contact.endclient || "",
+      reportingmanager: contact.reportingmanager || "",
+      country: contact.country || "",
       state: contact.state || "",
       city: contact.city || "",
-      spoc: contact.spoc || "",
-      firstOutreachDate: contact.firstOutreachDate || "",
-      lastOutreachDate: contact.lastOutreachDate || "",
-      lastOutreachTime: contact.lastOutreachTime || "",
-      nextOutreachDate: contact.nextOutreachDate || "",
-      nextOutreachTime: contact.nextOutreachTime || "",
-      
+      linkedin: contact.linkedin || "",
+      source: contact.source || "",
+      address: contact.address,
+      notes: contact.notes || "",
+      outreachdate: contact.outreachdate || "",
+      updatedby: contact.updatedby || "",
+      leadstatus: contact.leadstatus || "",
+      isactive: contact.isactive ?? true,
     });
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateContact = async () => {
-    if (!selectedContact) return;
 
-    try {
-      const response = await fetch(
-        API_ENDPOINTS.updateContact(selectedContact.id),
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to update contact");
-
-      toast({
-        title: "Success",
-        description: "Contact updated successfully",
-      });
-
-      setIsEditDialogOpen(false);
-      setIsViewDialogOpen(false);
-      setSelectedContact(null);
-      resetForm();
-      fetchContacts();
-    } catch (error) {
+  const validateForm = () => {
+  for (const field of REQUIRED_FIELDS) {
+    const value = formData[field as keyof typeof formData];
+    if (!value || value.toString().trim() === "") {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to update contact",
+        title: "Missing Required Field",
+        description: `Please fill out the ${field} field.`,
       });
+      return false;
     }
-  };
+  }
+  return true;
+};
+
+
+  const handleUpdateContact = async () => {
+  if (!selectedContact || !validateForm()) return;
+
+  try {
+    const response = await fetch(
+      API_ENDPOINTS.updateContact(selectedContact.id),
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to update contact");
+
+    toast({
+      title: "Success",
+      description: "Contact updated successfully",
+    });
+
+    setIsEditDialogOpen(false);
+    setIsViewDialogOpen(false);
+    setSelectedContact(null);
+    resetForm();
+    fetchContacts();
+  } catch (error) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Failed to update contact",
+    });
+  }
+};
+
 
   const handleViewClick = (contact: Contact) => {
     setSelectedContact(contact);
     setFormData({
+      businessname: contact.businessname,
+      firstname: contact.firstname,
+      lastname: contact.lastname,
       username: contact.username,
-      email: contact.email,
-      phonenumber: contact.phonenumber,
-      company: contact.company || "",
-      domain: contact.domain || "",
-      address: contact.address || "",
-      linkedIn: contact.linkedIn || "",
-      source: contact.source || "",
-      event: contact.event || "",
-      score: contact.score?.toString() || "",
-      countryCode: contact.countryCode || "+1",
-      updatedBy: contact.updatedBy || "",
-      statusDateOfRequest: contact.statusDateOfRequest || "",
-      vertical: contact.vertical || "",
-      customer: contact.customer || "",
-      endClient: contact.endClient || "",
-      preferredName: contact.preferredName || "",
       title: contact.title || "",
-      reportingManager: contact.reportingManager || "",
+      email: contact.email,
+      countrycode: contact.countrycode || "+1",
+      workphone: contact.workphone || "",
+      mobile: contact.mobile || "",
+      vertical: contact.vertical || "",
+      company: contact.company || "",
+      endclient: contact.endclient || "",
+      reportingmanager: contact.reportingmanager || "",
+      country: contact.country || "",
       state: contact.state || "",
       city: contact.city || "",
-      spoc: contact.spoc || "",
-      firstOutreachDate: contact.firstOutreachDate || "",
-      lastOutreachDate: contact.lastOutreachDate || "",
-      lastOutreachTime: contact.lastOutreachTime || "",
-      nextOutreachDate: contact.nextOutreachDate || "",
-      nextOutreachTime: contact.nextOutreachTime || "",
-
+      linkedin: contact.linkedin || "",
+      source: contact.source || "",
+      address: contact.address,
+      notes: contact.notes || "",
+      outreachdate: contact.outreachdate || "",
+      updatedby: contact.updatedby || "",
+      leadstatus: contact.leadstatus || "",
+      isactive: contact.isactive ?? true,
     });
     setIsViewDialogOpen(true);
   };
@@ -356,42 +413,41 @@ const Contacts = () => {
 
   const resetForm = () => {
     setFormData({
+      businessname: "",
+      firstname: "",
+      lastname: "",
       username: "",
-      address: "",
-      company: "",
-      linkedIn: "",
-      domain: "",
-      phonenumber: "",
-      countryCode: "+1",
-      email: "",
-      source: "",
-      event: "",
-      score: "",
-      updatedBy: "",
-      statusDateOfRequest: "",
-      vertical: "",
-      customer: "",
-      endClient: "",
-      preferredName: "",
       title: "",
-      reportingManager: "",
+      email: "",
+      countrycode: "+1",
+      workphone: "",
+      mobile: "",
+      vertical: "",
+      company: "",
+      endclient: "",
+      reportingmanager: "",
+      country: "",
       state: "",
       city: "",
-      spoc: "",
-      firstOutreachDate: "",
-      lastOutreachDate: "",
-      lastOutreachTime: "",
-      nextOutreachDate: "",
-      nextOutreachTime: "",
-
+      linkedin: "",
+      source: "",
+      address: "",
+      notes: "",
+      outreachdate: "",
+      updatedby: "",
+      leadstatus: "",
+      isactive: true,
     });
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
   };
 
   // --- 📤 Bulk Upload Handlers ---
@@ -400,34 +456,30 @@ const Contacts = () => {
   const handleDownloadTemplate = () => {
     const headers = [
       [
+        "businessname",
+        "firstname",
+        "lastname",
         "username",
-        "email",
-        "phonenumber",
-        "countryCode",
-        "company",
-        "domain",
-        "address",
-        "linkedIn",
-        "source",
-        "event",
-        "score",
-        // 🚀 NEW FIELDS ADDED HERE (Ensure these match the keys used in UserEmailService mapping)
-        "updatedBy",
-        "statusDateOfRequest",
-        "vertical",
-        "customer",
-        "endClient",
-        "preferredName",
         "title",
-        "reportingManager",
+        "email",
+        "countrycode",
+        "workphone",
+        "mobile",
+        "vertical",
+        "company",
+        "endclient",
+        "reportingmanager",
+        "country",
         "state",
         "city",
-        "spoc",
-        "firstOutreachDate",
-        "lastOutreachDate",
-        "lastOutreachTime",
-        "nextOutreachDate",
-        "nextOutreachTime",
+        "linkedin",
+        "source",
+        "address",
+        "notes",
+        "outreachdate",
+        "updatedby",
+        "leadstatus",
+        "isactive",
       ],
     ];
     // Create worksheet and workbook (using XLSX from the reference code)
@@ -462,82 +514,80 @@ const Contacts = () => {
   };
 
   // 3. Upload File Handler
-const handleBulkUpload = async () => {
-  if (!uploadedFile) {
-    toast({
-      title: "No file selected",
-      description: "Please choose a file before uploading.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("file", uploadedFile);
-console.log("uolDSDA",uploadedFile);
-
-  // ✅ Log all data being sent to backend
-  console.log("📦 FormData being sent:");
-  for (let [key, value] of formData.entries()) {
-
-    if (value instanceof File) {
-      console.log(`${key}:`, value.name, `(File size: ${value.size} bytes)`);
-    } else {
-      console.log(`${key}:`, value);
-    }
-  }
-
-  try {
-    setIsUploading(true);
-
-    const response = await fetch(API_ENDPOINTS.bulkupload, {
-      method: "POST",
-      body: formData,
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Bulk upload failed on the server.");
+  const handleBulkUpload = async () => {
+    if (!uploadedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please choose a file before uploading.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    if (result.success > 0 && result.failed === 0) {
-      toast({
-        title: "✅ Upload Successful",
-        description: `${result.success} contact(s) added successfully.`,
+    const formData = new FormData();
+    formData.append("file", uploadedFile);
+    console.log("uolDSDA", uploadedFile);
+
+    // ✅ Log all data being sent to backend
+    console.log("📦 FormData being sent:");
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}:`, value.name, `(File size: ${value.size} bytes)`);
+      } else {
+        console.log(`${key}:`, value);
+      }
+    }
+
+    try {
+      setIsUploading(true);
+
+      const response = await fetch(API_ENDPOINTS.bulkupload, {
+        method: "POST",
+        body: formData,
       });
-    } else if (result.success > 0 || result.failed > 0) {
-      toast({
-        title: "⚠️ Partial Upload",
-        description: `✅ ${result.success} added | ❌ ${result.failed} failed.`,
-      });
-    } else {
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Bulk upload failed on the server.");
+      }
+
+      if (result.success > 0 && result.failed === 0) {
+        toast({
+          title: "✅ Upload Successful",
+          description: `${result.success} contact(s) added successfully.`,
+        });
+      } else if (result.success > 0 || result.failed > 0) {
+        toast({
+          title: "⚠️ Partial Upload",
+          description: `✅ ${result.success} added | ❌ ${result.failed} failed.`,
+        });
+      } else {
+        toast({
+          title: "❌ Upload Failed",
+          description:
+            result.errors?.[0] || "No contacts were added. Check file format.",
+          variant: "destructive",
+        });
+      }
+
+      setUploadedFile(null);
+      setIsBulkUploadDialogOpen(false);
+      fetchContacts();
+    } catch (error) {
+      console.error("Bulk Upload Error:", error);
       toast({
         title: "❌ Upload Failed",
         description:
-          result.errors?.[0] || "No contacts were added. Check file format.",
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while uploading.",
         variant: "destructive",
       });
+    } finally {
+      setIsUploading(false);
     }
-
-    setUploadedFile(null);
-    setIsBulkUploadDialogOpen(false);
-    fetchContacts();
-  } catch (error) {
-    console.error("Bulk Upload Error:", error);
-    toast({
-      title: "❌ Upload Failed",
-      description:
-        error instanceof Error
-          ? error.message
-          : "Something went wrong while uploading.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsUploading(false);
-  }
-};
-
+  };
 
   // --- 💻 Render Section ---
 
@@ -594,6 +644,42 @@ console.log("uolDSDA",uploadedFile);
           </span>
         </div>
 
+        <Select value={selectedBusiness} onValueChange={setSelectedBusiness}>
+  <SelectTrigger className="w-48">
+    <SelectValue placeholder="All Business Names" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">All Business Names</SelectItem>
+    {Array.from(new Set(contacts.map((c) => c.businessname))).map(
+      (business) =>
+        business && (
+          <SelectItem key={business} value={business}>
+            {business}
+          </SelectItem>
+        )
+    )}
+  </SelectContent>
+</Select>
+
+<Select value={selectedSource} onValueChange={setSelectedSource}>
+  <SelectTrigger className="w-48">
+    <SelectValue placeholder="All Sources" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">All Sources</SelectItem>
+    {Array.from(new Set(contacts.map((c) => c.source))).map(
+      (src) =>
+        src && (
+          <SelectItem key={src} value={src}>
+            {src}
+          </SelectItem>
+        )
+    )}
+  </SelectContent>
+</Select>
+
+
+
         <Select value={selectedCompany} onValueChange={setSelectedCompany}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="All Companies" />
@@ -613,11 +699,11 @@ console.log("uolDSDA",uploadedFile);
 
         <Select value={selectedDomain} onValueChange={setSelectedDomain}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="All Domains" />
+            <SelectValue placeholder="All Tittle" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Domains</SelectItem>
-            {Array.from(new Set(contacts.map((c) => c.domain))).map(
+            <SelectItem value="all">All Tittle</SelectItem>
+            {Array.from(new Set(contacts.map((c) => c.title))).map(
               (domain) =>
                 domain && (
                   <SelectItem key={domain} value={domain}>
@@ -634,78 +720,73 @@ console.log("uolDSDA",uploadedFile);
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Business</TableHead>
               <TableHead>Username</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Company</TableHead>
-              <TableHead>Domain</TableHead>
+              <TableHead>Tittle</TableHead>
               <TableHead>Address</TableHead>
-              <TableHead>LinkedIn</TableHead>
+              <TableHead>linkedin</TableHead>
               <TableHead>Source</TableHead>
-              <TableHead>Event</TableHead>
-              <TableHead>Score</TableHead>
+              <TableHead>Active</TableHead>
+              <TableHead>Lead Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {filteredContacts.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={11}
-                  className="text-center text-muted-foreground"
-                >
-                  No contacts found. Add your first contact to get started.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredContacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell className="font-medium">
-                    {contact.username}
-                  </TableCell>
-                  <TableCell>{contact.email}</TableCell>
-                  <TableCell>
-                    {contact.countryCode
-                      ? `${contact.countryCode} ${contact.phonenumber}`
-                      : contact.phonenumber}
-                  </TableCell>
-                  <TableCell>{contact.company}</TableCell>
-                  <TableCell>{contact.domain}</TableCell>
-                  <TableCell>{contact.address}</TableCell>
-                  <TableCell>
-                    {contact.linkedIn && (
-                      <a
-                        href={contact.linkedIn}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        View Profile
-                      </a>
-                    )}
-                  </TableCell>
-                  <TableCell>{contact.source || "-"}</TableCell>
-                  <TableCell>{contact.event || "-"}</TableCell>
-                  <TableCell>{contact.score ?? "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewClick(contact)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {/* You can re-add the Edit button here if needed, or keep editing in the view dialog */}
-                      {/* <Button variant="ghost" size="icon" onClick={() => handleEditClick(contact)}>
-                        <Edit className="h-4 w-4" />
-                      </Button> */}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
+         <TableBody>
+  {filteredContacts.map((contact) => (
+    <TableRow key={contact.id}>
+      <TableCell>{contact.businessname}</TableCell>
+      <TableCell>{contact.username}</TableCell>
+      <TableCell>{contact.email}</TableCell>
+      <TableCell>
+        {contact.countrycode
+          ? `${contact.countrycode} ${contact.mobile}`
+          : contact.mobile}
+      </TableCell>
+      <TableCell>{contact.company}</TableCell>
+      <TableCell>{contact.title}</TableCell>
+      <TableCell>{contact.address}</TableCell>
+      <TableCell>
+        {contact.linkedin && (
+          <a
+            href={contact.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            View Profile
+          </a>
+        )}
+      </TableCell>
+      <TableCell>{contact.source || "-"}</TableCell>
+
+      {/* ✅ Active Column */}
+      <TableCell className="text-center">
+        {contact.isactive ? (
+          <span className="text-green-600 font-bold">✔</span>
+        ) : (
+          <span className="text-red-500 font-bold">✖</span>
+        )}
+      </TableCell>
+
+      <TableCell>{contact.leadstatus ?? "-"}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleViewClick(contact)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
+
         </Table>
       </div>
 
@@ -783,11 +864,9 @@ console.log("uolDSDA",uploadedFile);
 
       {/* ... (existing Add, Edit, View, Delete Dialogs) ... */}
       {/* ✅ Add Contact Dialog */}
-      
 
       {/* ✅ Add Contact Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        {/* ... (DialogHeader) ... */}
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Contact</DialogTitle>
@@ -795,9 +874,40 @@ console.log("uolDSDA",uploadedFile);
               Enter the contact details below
             </DialogDescription>
           </DialogHeader>
-          {/* Increased grid to cols-3 for better layout of many fields */}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
-            {/* Existing Fields */}
+            {/* Business & Name */}
+            <div className="space-y-2">
+              <Label htmlFor="businessname">Business Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="businessname"
+                name="businessname"
+                value={formData.businessname}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="firstname">First Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="firstname"
+                name="firstname"
+                value={formData.firstname}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastname">Last Name</Label>
+              <Input
+                id="lastname"
+                name="lastname"
+                value={formData.lastname}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Username & Email */}
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -807,8 +917,9 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
               <Input
                 id="email"
                 name="email"
@@ -817,159 +928,49 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
+
+            {/* ✅ Country Code + Work Phone */}
             <div className="space-y-2">
-              <Label htmlFor="phonenumber">Phone Number</Label>
-              <div className="flex gap-2">
-                <Select
-                  value={formData.countryCode}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, countryCode: value })
-                  }
-                >
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRY_CODES.map((item) => (
-                      <SelectItem key={item.code} value={item.code}>
-                        {item.code} {item.country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  id="phonenumber"
-                  name="phonenumber"
-                  value={formData.phonenumber}
-                  onChange={handleInputChange}
-                  placeholder="1234567890"
-                />
-              </div>
+              <Label htmlFor="countrycode">Country Code <span className="text-red-500">*</span></Label>
+              <select
+                id="countrycode"
+                name="countrycode"
+                value={formData.countrycode}
+                onChange={handleInputChange}
+                className="border rounded-md p-2 w-full"
+              >
+                {COUNTRY_CODES.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.code} ({item.country})
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Contact Numbers */}
             <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="workphone">Work Phone <span className="text-red-500">*</span></Label>
               <Input
-                id="company"
-                name="company"
-                value={formData.company}
+                id="workphone"
+                name="workphone"
+                value={formData.workphone}
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="domain">Domain</Label>
+              <Label htmlFor="mobile">Mobile <span className="text-red-500">*</span></Label>
               <Input
-                id="domain"
-                name="domain"
-                value={formData.domain}
+                id="mobile"
+                name="mobile"
+                value={formData.mobile}
                 onChange={handleInputChange}
               />
             </div>
+
+            {/* Job Info */}
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2 col-span-3">
-              <Label htmlFor="linkedIn">LinkedIn</Label>
-              <Input
-                id="linkedIn"
-                name="linkedIn"
-                value={formData.linkedIn}
-                onChange={handleInputChange}
-                placeholder="https://linkedin.com/in/..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="source">Source</Label>
-              <Input
-                id="source"
-                name="source"
-                value={formData.source}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="event">Event</Label>
-              <Input
-                id="event"
-                name="event"
-                value={formData.event}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="score">Score</Label>
-              <Input
-                id="score"
-                name="score"
-                type="number"
-                value={formData.score}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            {/* 🚀 NEW FIELDS ADDED HERE */}
-            <div className="space-y-2">
-              <Label htmlFor="updatedBy">Updated By</Label>
-              <Input
-                id="updatedBy"
-                name="updatedBy"
-                value={formData.updatedBy}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="statusDateOfRequest">Status Date of Request</Label>
-              <Input
-                id="statusDateOfRequest"
-                name="statusDateOfRequest"
-                type="date"
-                value={formData.statusDateOfRequest}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="vertical">Vertical</Label>
-              <Input
-                id="vertical"
-                name="vertical"
-                value={formData.vertical}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer">Customer</Label>
-              <Input
-                id="customer"
-                name="customer"
-                value={formData.customer}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endClient">End Client</Label>
-              <Input
-                id="endClient"
-                name="endClient"
-                value={formData.endClient}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="preferredName">Preferred Name</Label>
-              <Input
-                id="preferredName"
-                name="preferredName"
-                value={formData.preferredName}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
               <Input
                 id="title"
                 name="title"
@@ -977,15 +978,59 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="reportingManager">Reporting Manager</Label>
+              <Label htmlFor="vertical">Vertical <span className="text-red-500">*</span></Label>
               <Input
-                id="reportingManager"
-                name="reportingManager"
-                value={formData.reportingManager}
+                id="vertical"
+                name="vertical"
+                value={formData.vertical}
                 onChange={handleInputChange}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company">Company <span className="text-red-500">*</span></Label>
+              <Input
+                id="company"
+                name="company"
+                value={formData.company}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endclient">End Client</Label>
+              <Input
+                id="endclient"
+                name="endclient"
+                value={formData.endclient}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Management Info */}
+            <div className="space-y-2">
+              <Label htmlFor="reportingmanager">Reporting Manager</Label>
+              <Input
+                id="reportingmanager"
+                name="reportingmanager"
+                value={formData.reportingmanager}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Location Info */}
+            <div className="space-y-2">
+              <Label htmlFor="country">Country <span className="text-red-500">*</span></Label>
+              <Input
+                id="country"
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="state">State</Label>
               <Input
@@ -995,6 +1040,7 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
               <Input
@@ -1004,68 +1050,83 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="spoc">SPOC</Label>
-              <Input
-                id="spoc"
-                name="spoc"
-                value={formData.spoc}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="firstOutreachDate">First Outreach Date</Label>
-              <Input
-                id="firstOutreachDate"
-                name="firstOutreachDate"
-                type="date"
-                value={formData.firstOutreachDate}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastOutreachDate">Last Outreach Date</Label>
-              <Input
-                id="lastOutreachDate"
-                name="lastOutreachDate"
-                type="date"
-                value={formData.lastOutreachDate}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastOutreachTime">Last Outreach Time</Label>
-              <Input
-                id="lastOutreachTime"
-                name="lastOutreachTime"
-                type="time"
-                value={formData.lastOutreachTime}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="nextOutreachDate">Next Outreach Date</Label>
-              <Input
-                id="nextOutreachDate"
-                name="nextOutreachDate"
-                type="date"
-                value={formData.nextOutreachDate}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="nextOutreachTime">Next Outreach Time</Label>
-              <Input
-                id="nextOutreachTime"
-                name="nextOutreachTime"
-                type="time"
-                value={formData.nextOutreachTime}
-                onChange={handleInputChange}
-              />
-            </div>
-            {/* End NEW FIELDS */}
 
+            {/* Links & Source */}
+            <div className="space-y-2 col-span-3">
+              <Label htmlFor="linkedin">linkedin</Label>
+              <Input
+                id="linkedin"
+                name="linkedin"
+                value={formData.linkedin}
+                onChange={handleInputChange}
+                placeholder="https://linkedin.com/in/..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="source">Source <span className="text-red-500">*</span></Label>
+              <Input
+                id="source"
+                name="source"
+                value={formData.source}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2 col-span-3">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Outreach & Status */}
+            <div className="space-y-2">
+              <Label htmlFor="outreachdate">Outreach Date</Label>
+              <Input
+                id="outreachdate"
+                name="outreachdate"
+                type="date"
+                value={formData.outreachdate}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="updatedby">Updated By</Label>
+              <Input
+                id="updatedby"
+                name="updatedby"
+                value={formData.updatedby}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="leadstatus">Lead Status</Label>
+              <Input
+                id="leadstatus"
+                name="leadstatus"
+                value={formData.leadstatus}
+                onChange={handleInputChange}
+              />
+            </div>
           </div>
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -1080,211 +1141,114 @@ console.log("uolDSDA",uploadedFile);
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* ✅ Edit Contact Dialog */}
 
       {/* ✅ Edit Contact Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        {" "}
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {" "}
           <DialogHeader>
-            {" "}
-            <DialogTitle>Edit Contact</DialogTitle>{" "}
+            <DialogTitle>Edit Contact</DialogTitle>
             <DialogDescription>
               Update the contact details below
-            </DialogDescription>{" "}
-          </DialogHeader>{" "}
-          {/* Increased grid to cols-3 for better layout of many fields */}
+            </DialogDescription>
+          </DialogHeader>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
-            {" "}
-            {/* Existing Fields */}
+            {/* Business & Name */}
             <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-username">Username</Label>{" "}
+              <Label htmlFor="businessname">Business Name <span className="text-red-500">*</span></Label>
               <Input
-                id="edit-username"
+                id="businessname"
+                name="businessname"
+                value={formData.businessname}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="firstname">First Name <span className="text-red-500">*</span></Label>
+              <Input
+                id="firstname"
+                name="firstname"
+                value={formData.firstname}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastname">Last Name</Label>
+              <Input
+                id="lastname"
+                name="lastname"
+                value={formData.lastname}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Username & Email */}
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
                 name="username"
                 value={formData.username}
                 onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
+              />
+            </div>
+
             <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-email">Email</Label>{" "}
+              <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
               <Input
-                id="edit-email"
+                id="email"
                 name="email"
                 type="email"
                 value={formData.email}
                 onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
+              />
+            </div>
+
             <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-phonenumber">Phone Number</Label>{" "}
-              <div className="flex gap-2">
-                {" "}
-                <Select
-                  value={formData.countryCode}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, countryCode: value })
-                  }
-                >
-                  {" "}
-                  <SelectTrigger className="w-[100px]">
-                    {" "}
-                    <SelectValue />{" "}
-                  </SelectTrigger>{" "}
-                  <SelectContent>
-                    {" "}
-                    {COUNTRY_CODES.map((item) => (
-                      <SelectItem key={item.code} value={item.code}>
-                        {" "}
-                        {item.code} {item.country}{" "}
-                      </SelectItem>
-                    ))}{" "}
-                  </SelectContent>{" "}
-                </Select>{" "}
-                <Input
-                  id="edit-phonenumber"
-                  name="phonenumber"
-                  value={formData.phonenumber}
-                  onChange={handleInputChange}
-                  placeholder="1234567890"
-                />{" "}
-              </div>{" "}
-            </div>{" "}
-            <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-company">Company</Label>{" "}
-              <Input
-                id="edit-company"
-                name="company"
-                value={formData.company}
+              <Label htmlFor="countrycode">Country Code <span className="text-red-500">*</span></Label>
+              <select
+                id="countrycode"
+                name="countrycode"
+                value={formData.countrycode}
                 onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
+                className="border rounded-md p-2 w-full"
+              >
+                {COUNTRY_CODES.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.code} ({item.country})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Contact Numbers */}
             <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-domain">Domain</Label>{" "}
+              <Label htmlFor="workphone">Work Phone <span className="text-red-500">*</span></Label>
               <Input
-                id="edit-domain"
-                name="domain"
-                value={formData.domain}
-                onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
-            <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-address">Address</Label>{" "}
-              <Input
-                id="edit-address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
-            <div className="space-y-2 col-span-3">
-              {" "}
-              <Label htmlFor="edit-linkedIn">LinkedIn</Label>{" "}
-              <Input
-                id="edit-linkedIn"
-                name="linkedIn"
-                value={formData.linkedIn}
-                onChange={handleInputChange}
-                placeholder="https://linkedin.com/in/..."
-              />{" "}
-            </div>{" "}
-            <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-source">Source</Label>{" "}
-              <Input
-                id="edit-source"
-                name="source"
-                value={formData.source}
-                onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
-            <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-event">Event</Label>{" "}
-              <Input
-                id="edit-event"
-                name="event"
-                value={formData.event}
-                onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
-            <div className="space-y-2">
-              {" "}
-              <Label htmlFor="edit-score">Score</Label>{" "}
-              <Input
-                id="edit-score"
-                name="score"
-                type="number"
-                value={formData.score}
-                onChange={handleInputChange}
-              />{" "}
-            </div>{" "}
-            
-            {/* 🚀 NEW FIELDS ADDED HERE */}
-            <div className="space-y-2">
-              <Label htmlFor="updatedBy">Updated By</Label>
-              <Input
-                id="updatedBy"
-                name="updatedBy"
-                value={formData.updatedBy}
+                id="workphone"
+                name="workphone"
+                value={formData.workphone}
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="statusDateOfRequest">Status Date of Request</Label>
+              <Label htmlFor="mobile">Mobile <span className="text-red-500">*</span></Label>
               <Input
-                id="statusDateOfRequest"
-                name="statusDateOfRequest"
-                type="date"
-                value={formData.statusDateOfRequest}
+                id="mobile"
+                name="mobile"
+                value={formData.mobile}
                 onChange={handleInputChange}
               />
             </div>
+
+            {/* Job Info */}
             <div className="space-y-2">
-              <Label htmlFor="vertical">Vertical</Label>
-              <Input
-                id="edit-vertical"
-                name="vertical"
-                value={formData.vertical}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer">Customer</Label>
-              <Input
-                id="customer"
-                name="customer"
-                value={formData.customer}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endClient">End Client</Label>
-              <Input
-                id="endClient"
-                name="endClient"
-                value={formData.endClient}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="preferredName">Preferred Name</Label>
-              <Input
-                id="preferredName"
-                name="preferredName"
-                value={formData.preferredName}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
               <Input
                 id="title"
                 name="title"
@@ -1292,15 +1256,59 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="reportingManager">Reporting Manager</Label>
+              <Label htmlFor="vertical">Vertical <span className="text-red-500">*</span></Label>
               <Input
-                id="reportingManager"
-                name="reportingManager"
-                value={formData.reportingManager}
+                id="vertical"
+                name="vertical"
+                value={formData.vertical}
                 onChange={handleInputChange}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company">Company <span className="text-red-500">*</span></Label>
+              <Input
+                id="company"
+                name="company"
+                value={formData.company}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endclient">End Client</Label>
+              <Input
+                id="endclient"
+                name="endclient"
+                value={formData.endclient}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Management Info */}
+            <div className="space-y-2">
+              <Label htmlFor="reportingmanager">Reporting Manager</Label>
+              <Input
+                id="reportingmanager"
+                name="reportingmanager"
+                value={formData.reportingmanager}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Location Info */}
+            <div className="space-y-2">
+              <Label htmlFor="country">Country <span className="text-red-500">*</span></Label>
+              <Input
+                id="country"
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="state">State</Label>
               <Input
@@ -1310,6 +1318,7 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
               <Input
@@ -1319,68 +1328,83 @@ console.log("uolDSDA",uploadedFile);
                 onChange={handleInputChange}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="spoc">SPOC</Label>
+
+            {/* Links & Source */}
+            <div className="space-y-2 col-span-3">
+              <Label htmlFor="linkedin">linkedin</Label>
               <Input
-                id="spoc"
-                name="spoc"
-                value={formData.spoc}
+                id="linkedin"
+                name="linkedin"
+                value={formData.linkedin}
+                onChange={handleInputChange}
+                placeholder="https://linkedin.com/in/..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="source">Source <span className="text-red-500">*</span></Label>
+              <Input
+                id="source"
+                name="source"
+                value={formData.source}
                 onChange={handleInputChange}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="firstOutreachDate">First Outreach Date</Label>
+
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="address">Address</Label>
               <Input
-                id="firstOutreachDate"
-                name="firstOutreachDate"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2 col-span-3">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Outreach & Status */}
+            <div className="space-y-2">
+              <Label htmlFor="outreachdate">Outreach Date</Label>
+              <Input
+                id="outreachdate"
+                name="outreachdate"
                 type="date"
-                value={formData.firstOutreachDate}
+                value={formData.outreachdate}
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="lastOutreachDate">Last Outreach Date</Label>
+              <Label htmlFor="updatedby">Updated By</Label>
               <Input
-                id="lastOutreachDate"
-                name="lastOutreachDate"
-                type="date"
-                value={formData.lastOutreachDate}
+                id="updatedby"
+                name="updatedby"
+                value={formData.updatedby}
                 onChange={handleInputChange}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="lastOutreachTime">Last Outreach Time</Label>
+              <Label htmlFor="leadstatus">Lead Status</Label>
               <Input
-                id="lastOutreachTime"
-                name="lastOutreachTime"
-                type="time"
-                value={formData.lastOutreachTime}
+                id="leadstatus"
+                name="leadstatus"
+                value={formData.leadstatus}
                 onChange={handleInputChange}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="nextOutreachDate">Next Outreach Date</Label>
-              <Input
-                id="nextOutreachDate"
-                name="nextOutreachDate"
-                type="date"
-                value={formData.nextOutreachDate}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="nextOutreachTime">Next Outreach Time</Label>
-              <Input
-                id="nextOutreachTime"
-                name="nextOutreachTime"
-                type="time"
-                value={formData.nextOutreachTime}
-                onChange={handleInputChange}
-              />
-            </div>
-            {/* End NEW FIELDS */}
-            
-          </div>{" "}
+          </div>
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -1396,142 +1420,210 @@ console.log("uolDSDA",uploadedFile);
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* ... (rest of the code) ... */}
       {/* ✅ View Contact Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        {" "}
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {" "}
-          <DialogHeader>
-            {" "}
-            <DialogTitle>Contact Details</DialogTitle>{" "}
-            <DialogDescription>
-              View or edit contact information
-            </DialogDescription>{" "}
-          </DialogHeader>{" "}
-          {selectedContact && (
-            <div className="grid grid-cols-2 gap-4 py-4">
-              {" "}
-              {[
-                { label: "Username", key: "username" },
-                { label: "Email", key: "email" },
-                { label: "Phone Number", key: "phonenumber" },
-                { label: "Company", key: "company" },
-                { label: "Domain", key: "domain" },
-                { label: "Address", key: "address" },
-                { label: "LinkedIn", key: "linkedIn" },
-                { label: "Source", key: "source" },
-                { label: "Event", key: "event" },
-                { label: "Score", key: "score" },
-                { label: "Updated By", key: "updatedBy" },
-                { label: "Status Date of Request", key: "statusDateOfRequest" },
-                { label: "Vertical", key: "vertical" }, 
-                { label: "Customer", key: "customer" },
-                { label: "End Client", key: "endClient" },
-                { label: "Preferred Name", key: "preferredName" },
-                { label: "Title", key: "title" }, 
-                { label: "Reporting Manager", key: "reportingManager" },
-                { label: "State", key: "state" },
-                { label: "City", key: "city" },
-                { label: "SPOC", key: "spoc" },
-                { label: "First Outreach Date", key: "firstOutreachDate" },
-                { label: "Last Outreach Date", key: "lastOutreachDate" },
-                { label: "Last Outreach Time", key: "lastOutreachTime" },
-                { label: "Next Outreach Date", key: "nextOutreachDate" },
-                { label: "Next Outreach Time", key: "nextOutreachTime" },
-              ].map(({ label, key }) => (
-                <div key={key} className="space-y-2">
-                  {" "}
-                  <Label htmlFor={key}>{label}</Label>{" "}
-                  <Input
-                    id={key}
-                    name={key}
-                    value={formData[key as keyof typeof formData] || ""}
-                    onChange={handleInputChange}
-                    disabled={!isEditDialogOpen}
-                  />{" "}
-                </div>
-              ))}{" "}
-            </div>
-          )}{" "}
-          <DialogFooter className="flex justify-between items-center">
-            {" "}
-            {/* Left side: Edit/Delete */}{" "}
-            <div className="flex gap-2">
-              {" "}
-              {!isEditDialogOpen ? (
-                <Button
-                  variant="default"
-                  onClick={() => {
-                    setIsEditDialogOpen(true);
-                    setFormData({
-                      username: selectedContact?.username || "",
-                      email: selectedContact?.email || "",
-                      phonenumber: selectedContact?.phonenumber || "",
-                      company: selectedContact?.company || "",
-                      domain: selectedContact?.domain || "",
-                      address: selectedContact?.address || "",
-                      linkedIn: selectedContact?.linkedIn || "",
-                      source: selectedContact?.source || "",
-                      event: selectedContact?.event || "",
-                      score: selectedContact?.score?.toString() || "",
-                      countryCode: selectedContact?.countryCode || "+1",
-                      updatedBy: selectedContact?.updatedBy || "",
-                      statusDateOfRequest:
-                        selectedContact?.statusDateOfRequest || "",
-                      vertical: selectedContact?.vertical || "",
-                      customer: selectedContact?.customer || "",
-                      endClient: selectedContact?.endClient || "",
-                      preferredName: selectedContact?.preferredName || "",
-                      title: selectedContact?.title || "",
-                      reportingManager:
-                        selectedContact?.reportingManager || "",
-                      state: selectedContact?.state || "",
-                      city: selectedContact?.city || "",
-                      spoc: selectedContact?.spoc || "",
-                      firstOutreachDate:
-                        selectedContact?.firstOutreachDate || "",
-                      lastOutreachDate:
-                        selectedContact?.lastOutreachDate || "",
-                      lastOutreachTime:
-                        selectedContact?.lastOutreachTime || "",
-                      nextOutreachDate:
-                        selectedContact?.nextOutreachDate || "",
-                      nextOutreachTime:
-                        selectedContact?.nextOutreachTime || "",
+     <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Contact Details</DialogTitle>
+      <DialogDescription>View or edit contact information</DialogDescription>
+    </DialogHeader>
 
-                    });
-                  }}
-                >
-                  {" "}
-                  Edit{" "}
-                </Button>
-              ) : (
-                <Button onClick={handleUpdateContact}>Save Changes</Button>
-              )}{" "}
-              <Button
-                variant="destructive"
-                onClick={() => handleDeleteClick(selectedContact!.id)}
-              >
-                {" "}
-                Delete{" "}
-              </Button>{" "}
-            </div>{" "}
-            {/* Right side: Close */}{" "}
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsViewDialogOpen(false);
-                setIsEditDialogOpen(false);
-                setSelectedContact(null);
-              }}
+    {selectedContact && (
+      <div className="space-y-6 py-2">
+        {/* Contact Info */}
+        <div>
+          <h3 className="font-semibold text-lg mb-2">Contact Information</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Business Name", key: "businessname" },
+              { label: "First Name", key: "firstname" },
+              { label: "Last Name", key: "lastname" },
+              { label: "Username", key: "username" },
+              { label: "Title", key: "title" },
+              { label: "Email", key: "email" },
+              { label: "Country Code", key: "countrycode" },
+              { label: "Work Phone", key: "workphone" },
+              { label: "Mobile", key: "mobile" },
+            ].map(({ label, key }) => (
+              <div key={key}>
+                <Label htmlFor={key}>{label}</Label>
+                <Input
+                  id={key}
+                  name={key}
+                  value={formData[key] || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      [key]: e.target.value,
+                    }))
+                  }
+                  disabled={!isEditDialogOpen}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Company Info */}
+        <div>
+          <h3 className="font-semibold text-lg mb-2">Company Details</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Vertical", key: "vertical" },
+              { label: "Company", key: "company" },
+              { label: "End Client", key: "endclient" },
+              { label: "Reporting Manager", key: "reportingmanager" },
+              { label: "Country", key: "country" },
+              { label: "State", key: "state" },
+              { label: "City", key: "city" },
+              { label: "Address", key: "address" },
+            ].map(({ label, key }) => (
+              <div key={key}>
+                <Label htmlFor={key}>{label}</Label>
+                <Input
+                  id={key}
+                  name={key}
+                  value={formData[key] || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      [key]: e.target.value,
+                    }))
+                  }
+                  disabled={!isEditDialogOpen}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Additional Info */}
+        <div>
+          <h3 className="font-semibold text-lg mb-2">
+            Additional Information
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "linkedin", key: "linkedin" },
+              { label: "Source", key: "source" },
+              { label: "Outreach Date", key: "outreachdate", type: "date" },
+              { label: "Notes", key: "notes" },
+              { label: "Updated By", key: "updatedby" },
+              { label: "Lead Status", key: "leadstatus" },
+            ].map(({ label, key, type }) => (
+              <div key={key}>
+                <Label htmlFor={key}>{label}</Label>
+                <Input
+                  id={key}
+                  name={key}
+                  type={type || "text"}
+                  value={formData[key] || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      [key]: e.target.value,
+                    }))
+                  }
+                  disabled={!isEditDialogOpen}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Active Status */}
+        <div>
+          <h3 className="font-semibold text-lg mb-2">Status</h3>
+          <div>
+            <Label htmlFor="isactive">Active</Label>
+            <select
+              id="isactive"
+              name="isactive"
+              value={formData.isactive ? "true" : "false"}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  isactive: e.target.value === "true",
+                }))
+              }
+              disabled={!isEditDialogOpen}
+              className="border rounded-md px-2 py-1 w-full"
             >
-              {" "}
-              Close{" "}
-            </Button>{" "}
-          </DialogFooter>{" "}
-        </DialogContent>{" "}
-      </Dialog>
+              <option value="true">True</option>
+              <option value="false">False</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Footer Buttons */}
+    <DialogFooter className="flex justify-between items-center mt-4">
+      {/* Left Buttons */}
+      <div className="flex gap-2">
+        {!isEditDialogOpen ? (
+          <Button
+            onClick={() => {
+              setIsEditDialogOpen(true);
+              setFormData({
+                businessname: selectedContact?.businessname || "",
+                firstname: selectedContact?.firstname || "",
+                lastname: selectedContact?.lastname || "",
+                username: selectedContact?.username || "",
+                title: selectedContact?.title || "",
+                email: selectedContact?.email || "",
+                countrycode: selectedContact?.countrycode || "+1",
+                workphone: selectedContact?.workphone || "",
+                mobile: selectedContact?.mobile || "",
+                vertical: selectedContact?.vertical || "",
+                company: selectedContact?.company || "",
+                endclient: selectedContact?.endclient || "",
+                reportingmanager: selectedContact?.reportingmanager || "",
+                country: selectedContact?.country || "",
+                state: selectedContact?.state || "",
+                city: selectedContact?.city || "",
+                linkedin: selectedContact?.linkedin || "",
+                source: selectedContact?.source || "",
+                address: selectedContact?.address || "",
+                notes: selectedContact?.notes || "",
+                outreachdate: selectedContact?.outreachdate || "",
+                updatedby: selectedContact?.updatedby || "",
+                leadstatus: selectedContact?.leadstatus || "",
+                isactive: selectedContact?.isactive ?? true,
+              });
+            }}
+          >
+            Edit
+          </Button>
+        ) : (
+          <Button onClick={handleUpdateContact}>Save Changes</Button>
+        )}
+        <Button
+          variant="destructive"
+          onClick={() => handleDeleteClick(selectedContact!.id)}
+        >
+          Delete
+        </Button>
+      </div>
+
+      {/* Right Button */}
+      <Button
+        variant="outline"
+        onClick={() => {
+          setIsViewDialogOpen(false);
+          setIsEditDialogOpen(false);
+          setSelectedContact(null);
+        }}
+      >
+        Close
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+
       {/* ✅ Delete Confirmation Dialog */}
       <AlertDialog
         open={isDeleteDialogOpen}
