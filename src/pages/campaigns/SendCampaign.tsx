@@ -43,6 +43,7 @@ interface User {
   email: string;
   businessname?: string;
   company?: string;
+  title?: string;
 }
 
 const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
@@ -244,7 +245,7 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
       !businessNameFilter ||
       user.businessname === businessNameFilter;
     const matchEmail =
-      emailFilter === "all" || !emailFilter || user.email === emailFilter;
+      emailFilter === "all" || !emailFilter || user.title === emailFilter;
     const matchCompany =
       companyFilter === "all" || !companyFilter || user.company === companyFilter;
     return matchBusiness && matchEmail && matchCompany;
@@ -378,7 +379,7 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
 
                 {/* Email Filter */}
                 <div>
-                  <Label className="text-sm">Email</Label>
+                  <Label className="text-sm">Title</Label>
                   <Select value={emailFilter} onValueChange={setEmailFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filter by email" />
@@ -386,10 +387,10 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
                       {[...new Set(
-                        users.map((u) => u.email).filter(Boolean)
-                      )].map((email) => (
-                        <SelectItem key={email} value={email}>
-                          {email}
+                        users.map((u) => u.title).filter(Boolean)
+                      )].map((title) => (
+                        <SelectItem key={title} value={title}>
+                          {title}
                         </SelectItem>
                       ))}
                     </SelectContent>
