@@ -479,8 +479,6 @@ const [selectedSource, setSelectedSource] = useState("all");
         "notes",
         "leadstatus",
         "isactive",
-        "outreachdate",
-        "updatedby",
       ],
     ];
     // Create worksheet and workbook (using XLSX from the reference code)
