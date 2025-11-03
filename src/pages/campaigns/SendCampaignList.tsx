@@ -153,10 +153,10 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
         </Button>
 
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Campaign Logs</h1>
-          <Button onClick={onCreate} className="flex items-center gap-2">
+          {/* <h1 className="text-3xl font-bold">Campaign Logs</h1> */}
+          {/* <Button onClick={onCreate} className="flex items-center gap-2">
             <PlusCircle className="w-4 h-4" /> New Campaign
-          </Button>
+          </Button> */}
         </div>
       </div>
 
