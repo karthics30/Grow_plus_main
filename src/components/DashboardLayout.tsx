@@ -12,6 +12,8 @@ const DashboardLayout = () => {
     if (!isAuthenticated) navigate("/");
   }, [navigate]);
 
+  // Handle logout
+
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
     navigate("/");

@@ -20,6 +20,8 @@ import { AddCampaignModal } from "@/components/AddCampaignModal";
 import { ViewCampaignsModal } from "@/components/ViewCampaignModal";
 import { v4 as uuidv4 } from "uuid";
 import { Plus, FileText, Eye, Pencil, Trash2 } from "lucide-react";
+import { FaCopy } from "react-icons/fa";
+
 import {
   Dialog,
   DialogContent,
@@ -100,7 +102,9 @@ const Dashboard = () => {
     setLoading(true);
 
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
       if (campaignId) headers["campaign-id"] = String(campaignId);
 
       const response = await fetch(
@@ -109,7 +113,6 @@ const Dashboard = () => {
       );
 
       console.log("🧩 Fetching with headers:", headers);
-
 
       if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
       const data = await response.json();
@@ -127,7 +130,6 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-
 
   // 🟢 Create Template
   const handleCreateTemplate = async (e: React.FormEvent) => {
@@ -148,7 +150,7 @@ const Dashboard = () => {
       const formData = new FormData();
       formData.append("name", newTemplate.name);
       formData.append("subject", newTemplate.subject);
-      
+
       // 💡 FIX: Removed .replace(/\n/g, "<br/>") - use clean HTML from draftToHtml
       formData.append("html", newTemplate.html);
 
@@ -175,14 +177,13 @@ const Dashboard = () => {
         // Reset form fields
         setNewTemplate({ name: "", subject: "", html: "", attachments: [] });
         setEditorState(EditorState.createEmpty());
-        
+
         // Refresh template list for the currently selected campaign filter
-        if (typeof selectedCampaignFilter === 'number') {
-            fetchTemplates(selectedCampaignFilter);
+        if (typeof selectedCampaignFilter === "number") {
+          fetchTemplates(selectedCampaignFilter);
         } else {
-            fetchTemplates(selectedCampaign);
+          fetchTemplates(selectedCampaign);
         }
-        
       } else {
         const err = await response.json();
         console.error("Error response:", err);
@@ -213,8 +214,9 @@ const Dashboard = () => {
 
     // ✅ Pre-fill campaign selection if template has campaign info (assuming campaignId is on template object)
     // NOTE: This relies on your API returning the campaignId on the Template object.
-    const campaignIdOnTemplate = (template as any).campaignId || selectedCampaignFilter; 
-    
+    const campaignIdOnTemplate =
+      (template as any).campaignId || selectedCampaignFilter;
+
     if (campaignIdOnTemplate) {
       setSelectedCampaign(Number(campaignIdOnTemplate));
     } else {
@@ -246,10 +248,10 @@ const Dashboard = () => {
     const formData = new FormData();
     formData.append("name", editData.name);
     formData.append("subject", editData.subject);
-    
+
     // 💡 FIX: Removed .replace(/\n/g, "<br/>") - use clean HTML from draftToHtml
-    formData.append("html", editData.html); 
-    
+    formData.append("html", editData.html);
+
     formData.append("campaignId", String(selectedCampaign));
 
     if (editData.attachments.length > 0) {
@@ -271,12 +273,12 @@ const Dashboard = () => {
           title: "Success",
           description: result.message || "Template updated successfully",
         });
-        
+
         // Refresh template list for the currently selected campaign filter
-        if (typeof selectedCampaignFilter === 'number') {
-            fetchTemplates(selectedCampaignFilter);
+        if (typeof selectedCampaignFilter === "number") {
+          fetchTemplates(selectedCampaignFilter);
         }
-        
+
         setIsEditOpen(false);
       } else {
         console.error("Backend error:", result);
@@ -356,11 +358,11 @@ const Dashboard = () => {
       // ✅ Normalize backend response shape
       const campaignList = Array.isArray(data?.data)
         ? data.data.map((c: any) => ({
-              id: String(c.id), // Ensure id is string for Campaign type
-              name: c.CampaignName,
-              description: c.Desc,
-              createdAt: c.createdAt || c.created_at || new Date().toISOString(), // fallback
-            }))
+            id: String(c.id), // Ensure id is string for Campaign type
+            name: c.CampaignName,
+            description: c.Desc,
+            createdAt: c.createdAt || c.created_at || new Date().toISOString(), // fallback
+          }))
         : [];
 
       setCampaigns(campaignList);
@@ -465,9 +467,12 @@ const Dashboard = () => {
 
       // Remove from UI immediately
       setCampaigns((prev) => prev.filter((c) => c.id !== id));
-      
+
       // Clear templates if the deleted campaign was selected in the filter
-      if (selectedCampaignFilter && Number(selectedCampaignFilter) === Number(id)) {
+      if (
+        selectedCampaignFilter &&
+        Number(selectedCampaignFilter) === Number(id)
+      ) {
         setSelectedCampaignFilter("");
         setTemplates([]);
       }
@@ -475,6 +480,56 @@ const Dashboard = () => {
       toast({
         title: "Error",
         description: "Failed to delete campaign",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicateTemplate = async (template: Template) => {
+    if (!template) return;
+
+    try {
+      // Get next copy suffix
+      const existingCopies = templates.filter(
+        (t) =>
+          t.name.startsWith(template.name) ||
+          t.name.startsWith(`${template.name} (`)
+      );
+
+      const newCopyIndex = existingCopies.length;
+      const newName = `${template.name} (${newCopyIndex})`;
+
+      const formData = new FormData();
+      formData.append("name", newName);
+      formData.append("subject", template.subject);
+      formData.append("html", template.html);
+      formData.append("campaignId", String((template as any).campaignId));
+
+      // if (template.attachments && template.attachments.length > 0) {
+      //   template.attachments.forEach((file: any) => {
+      //     formData.append("attachments", null);
+      //   });
+      // }
+
+      const response = await fetch(API_ENDPOINTS.createTemplate, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Duplicate failed");
+
+      toast({
+        title: "Duplicated",
+        description: `${newName} created successfully`,
+      });
+
+      if (typeof selectedCampaignFilter === "number") {
+        fetchTemplates(selectedCampaignFilter);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to duplicate template",
         variant: "destructive",
       });
     }
@@ -535,8 +590,8 @@ const Dashboard = () => {
                   <select
                     id="campaign"
                     value={selectedCampaign ?? ""} // Use ?? "" to handle null/undefined
-                    onChange={(e) =>
-                      setSelectedCampaign(Number(e.target.value) || null) // Set to null if value is empty string
+                    onChange={
+                      (e) => setSelectedCampaign(Number(e.target.value) || null) // Set to null if value is empty string
                     }
                     className="border border-gray-300 rounded-md p-2 w-full"
                     required
@@ -679,151 +734,166 @@ const Dashboard = () => {
 
           {/* ---------- Template Cards ---------- */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loading && <div className="text-center col-span-full py-8 text-gray-500">Loading templates...</div>}
-            
-            {!loading && templates.length > 0 ? (
-              templates.map((template) => (
-                <Card
-                  key={template.id}
-                  className="hover:shadow-lg transition-shadow"
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <FileText className="w-4 h-4 text-primary" />
-                      {template.name}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-1">
-                      {template.subject}
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="space-y-3">
-                    {/* 👁 Preview */}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => setPreviewTemplate(template)}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Preview
-                        </Button>
-                      </DialogTrigger>
-
-                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
-                        <DialogHeader>
-                          <DialogTitle>{previewTemplate?.name}</DialogTitle>
-                          <DialogDescription>
-                            {previewTemplate?.subject}
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        {/* HTML Preview */}
-                        <div
-                          className="border rounded-lg p-4 bg-muted/30 mb-4"
-                          dangerouslySetInnerHTML={{
-                            __html: previewTemplate?.html || "",
-                          }}
-                        />
-
-                        {/* Image Attachments */}
-                        {previewTemplate?.attachments &&
-                          previewTemplate.attachments.length > 0 && (
-                            <div className="space-y-3">
-                              <h3 className="font-medium text-lg">
-                                Attached Image(s):
-                              </h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {previewTemplate.attachments.map(
-                                  (file: any, index: number) => {
-                                    // Assuming your file structure and serving setup are correct for this path
-                                    const imageUrl = `${import.meta.env.VITE_API_BASE_URL}/templates/${file.filename}`; 
-
-                      
-                                    return (
-                                      <div
-                                        key={index}
-                                        className="border rounded-lg p-2 bg-white shadow-sm flex flex-col items-center"
-                                      >
-                                        <img
-                                          src={imageUrl}
-                                          alt={file.originalName}
-                                          className="max-h-48 object-contain rounded-md"
-                                        />
-                                        <p className="text-xs mt-2 text-muted-foreground text-center break-all">
-                                          {file.originalName}
-                                        </p>
-                                      </div>
-                                    );
-                                  }
-                                )}
-                              </div>
-                            </div>
-                          )}
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* ✏️ Edit & ❌ Delete */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
-                        onClick={() => handleEditClick(template)}
-                      >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            className="flex-1"
-                            disabled={deletingId === template.id}
-                          >
-                            {deletingId === template.id ? (
-                              "Deleting..."
-                            ) : (
-                              <>
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </>
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete{" "}
-                              <strong>{template.name}</strong>.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteTemplate(template.id)}
-                              className="bg-destructive text-white hover:bg-destructive/90"
-                            >
-                              Confirm Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              !loading && (
-                <div className="text-center col-span-full py-8 text-gray-500">
-                  {selectedCampaignFilter
-                    ? "No templates found for this campaign."
-                    : "Please select a campaign to view its templates."}
-                </div>
-              )
+            {loading && (
+              <div className="text-center col-span-full py-8 text-gray-500">
+                Loading templates...
+              </div>
             )}
+
+            {!loading && templates.length > 0
+              ? templates.map((template) => (
+                  <Card
+                    key={template.id}
+                    className="hover:shadow-lg transition-shadow"
+                  >
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-primary" />
+                          {template.name}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="text-gray-500 hover:text-gray-800"
+                          onClick={() => handleDuplicateTemplate(template)}
+                        >
+                          <FaCopy className="w-4 h-4" />
+                        </button>
+                      </CardTitle>
+                      {/* <CardDescription className="line-clamp-1">
+                        {template.subject}
+                      </CardDescription> */}
+                    </CardHeader>
+
+                    <CardContent className="space-y-3">
+                      {/* 👁 Preview */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setPreviewTemplate(template)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Preview
+                          </Button>
+                        </DialogTrigger>
+
+                        <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+                          <DialogHeader>
+                            <DialogTitle>{previewTemplate?.name}</DialogTitle>
+                            <DialogDescription>
+                              {previewTemplate?.subject}
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          {/* HTML Preview */}
+                          <div
+                            className="border rounded-lg p-4 bg-muted/30 mb-4"
+                            dangerouslySetInnerHTML={{
+                              __html: previewTemplate?.html || "",
+                            }}
+                          />
+
+                          {/* Image Attachments */}
+                          {previewTemplate?.attachments &&
+                            previewTemplate.attachments.length > 0 && (
+                              <div className="space-y-3">
+                                <h3 className="font-medium text-lg">
+                                  Attached Image(s):
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {previewTemplate.attachments.map(
+                                    (file: any, index: number) => {
+                                      // Assuming your file structure and serving setup are correct for this path
+                                      const imageUrl = `${
+                                        import.meta.env.VITE_API_BASE_URL
+                                      }/templates/${file.filename}`;
+
+                                      return (
+                                        <div
+                                          key={index}
+                                          className="border rounded-lg p-2 bg-white shadow-sm flex flex-col items-center"
+                                        >
+                                          <img
+                                            src={imageUrl}
+                                            alt={file.originalName}
+                                            className="max-h-48 object-contain rounded-md"
+                                          />
+                                          <p className="text-xs mt-2 text-muted-foreground text-center break-all">
+                                            {file.originalName}
+                                          </p>
+                                        </div>
+                                      );
+                                    }
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                        </DialogContent>
+                      </Dialog>
+
+                      {/* ✏️ Edit & ❌ Delete */}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={() => handleEditClick(template)}
+                        >
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              className="flex-1"
+                              disabled={deletingId === template.id}
+                            >
+                              {deletingId === template.id ? (
+                                "Deleting..."
+                              ) : (
+                                <>
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </>
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete{" "}
+                                <strong>{template.name}</strong>.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleDeleteTemplate(template.id)
+                                }
+                                className="bg-destructive text-white hover:bg-destructive/90"
+                              >
+                                Confirm Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              : !loading && (
+                  <div className="text-center col-span-full py-8 text-gray-500">
+                    {selectedCampaignFilter
+                      ? "No templates found for this campaign."
+                      : "Please select a campaign to view its templates."}
+                  </div>
+                )}
           </div>
         </div>
 
@@ -848,7 +918,9 @@ const Dashboard = () => {
                 <select
                   id="edit-campaign"
                   value={selectedCampaign ?? ""} // Use ?? "" to handle null/undefined
-                  onChange={(e) => setSelectedCampaign(Number(e.target.value) || null)} // Set to null if value is empty string
+                  onChange={(e) =>
+                    setSelectedCampaign(Number(e.target.value) || null)
+                  } // Set to null if value is empty string
                   className="border border-gray-300 rounded-md p-2 w-full"
                   required
                 >
