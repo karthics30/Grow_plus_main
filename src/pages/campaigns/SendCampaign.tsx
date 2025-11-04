@@ -61,6 +61,10 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
   const [businessNameFilter, setBusinessNameFilter] = useState("all");
   const [emailFilter, setEmailFilter] = useState("all");
   const [companyFilter, setCompanyFilter] = useState("all");
+const [searchText, setSearchText] = useState("");
+const [suggestions, setSuggestions] = useState([]);
+
+
 
   const { toast } = useToast();
 
@@ -69,6 +73,31 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
     fetchCampaigns();
     fetchUsers();
   }, []);
+
+  const handleSearch = (value) => {
+  setSearchText(value);
+
+  if (!value) {
+    setSuggestions([]);
+    return;
+  }
+
+  const q = value.toLowerCase();
+
+  const matched = users
+    .filter(
+      (u) =>
+        u.username?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.businessname?.toLowerCase().includes(q) ||
+        u.title?.toLowerCase().includes(q) ||
+        u.company?.toLowerCase().includes(q)
+    )
+    .slice(0, 5); // limit suggestions
+
+  setSuggestions(matched);
+};
+
 
   // ✅ Fetch all campaigns
   const fetchCampaigns = async () => {
@@ -238,18 +267,37 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
   const handleRemoveRecipient = (email: string) =>
     setRecipients((prev) => prev.filter((r) => r.email !== email));
 
-  // ✅ Apply dropdown filters (AND-based)
-  const filteredUsers = users.filter((user) => {
-    const matchBusiness =
-      businessNameFilter === "all" ||
-      !businessNameFilter ||
-      user.businessname === businessNameFilter;
-    const matchEmail =
-      emailFilter === "all" || !emailFilter || user.title === emailFilter;
-    const matchCompany =
-      companyFilter === "all" || !companyFilter || user.company === companyFilter;
-    return matchBusiness && matchEmail && matchCompany;
-  });
+  // Step 1: Filter users by business name first
+const businessFilteredUsers =
+  businessNameFilter === "all"
+    ? users
+    : users.filter((u) => u.businessname === businessNameFilter);
+
+// Step 2: Filter the business filtered users by title
+const titleFilteredUsers =
+  emailFilter === "all"
+    ? businessFilteredUsers
+    : businessFilteredUsers.filter((u) => u.title === emailFilter);
+
+// Step 3: Final filter by company
+// Company filter
+const companyFilteredUsers =
+  companyFilter === "all"
+    ? titleFilteredUsers
+    : titleFilteredUsers.filter((u) => u.company === companyFilter);
+
+// Final filtered by search text
+const filteredUsers = companyFilteredUsers.filter((u) => {
+  const q = searchText.toLowerCase();
+  return (
+    u.username?.toLowerCase().includes(q) ||
+    u.email?.toLowerCase().includes(q) ||
+    u.businessname?.toLowerCase().includes(q) ||
+    u.title?.toLowerCase().includes(q) ||
+    u.company?.toLowerCase().includes(q)
+  );
+});
+
 
   const isAllSelected = recipients.length === users.length && users.length > 0;
   const isButtonDisabled =
@@ -352,6 +400,52 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
                 Recipients
               </Label>
 
+{/* Search Bar */}
+<div className="mt-2 mb-3 relative">
+  <Input
+    placeholder="Search name, email, business, title, company..."
+    value={searchText}
+    onChange={(e) => handleSearch(e.target.value)}
+    className="w-full"
+  />
+
+  {suggestions.length > 0 && (
+    <div className="absolute z-50 w-full bg-white border rounded-md shadow-md max-h-40 overflow-auto">
+      {suggestions.map((s, index) => (
+        <div
+          key={index}
+          className="p-2 cursor-pointer hover:bg-gray-100"
+         onClick={() => {
+  const value =
+    s.username ||
+    s.email ||
+    s.businessname ||
+    s.title ||
+    s.company;
+
+  setSearchText(value);
+  setSuggestions([]);
+
+  // Apply filter based on what matched
+   setBusinessNameFilter(s.businessname || "");
+  setEmailFilter(s.title || "");
+  setCompanyFilter(s.company || "");
+}}
+
+          
+        >
+          <div className="font-medium">{s.username}</div>
+          <div className="text-xs text-gray-500">
+            {s.email} · {s.businessname} · {s.title} · {s.company}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+
+
               {/* ✅ Dropdown Filters */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 {/* Business Name Filter */}
@@ -366,9 +460,7 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      {[...new Set(
-                        users.map((u) => u.businessname).filter(Boolean)
-                      )].map((bn) => (
+                      {[...new Set(users.map((u) => u.businessname).filter(Boolean))].map((bn) => (
                         <SelectItem key={bn} value={bn}>
                           {bn}
                         </SelectItem>
@@ -386,13 +478,15 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      {[...new Set(
-                        users.map((u) => u.title).filter(Boolean)
-                      )].map((title) => (
-                        <SelectItem key={title} value={title}>
-                          {title}
-                        </SelectItem>
-                      ))}
+                     {[...new Set(businessFilteredUsers.map((u) => u.title).filter(Boolean))].map(
+  (title) => (
+    <SelectItem key={title} value={title}>
+      {title}
+    </SelectItem>
+  )
+)}
+
+                  
                     </SelectContent>
                   </Select>
                 </div>
@@ -409,13 +503,14 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      {[...new Set(
-                        users.map((u) => u.company).filter(Boolean)
-                      )].map((company) => (
-                        <SelectItem key={company} value={company}>
-                          {company}
-                        </SelectItem>
-                      ))}
+                     {[...new Set(titleFilteredUsers.map((u) => u.company).filter(Boolean))].map(
+  (company) => (
+    <SelectItem key={company} value={company}>
+      {company}
+    </SelectItem>
+  )
+)}
+
                     </SelectContent>
                   </Select>
                 </div>
@@ -429,6 +524,7 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
                   setBusinessNameFilter("all");
                   setEmailFilter("all");
                   setCompanyFilter("all");
+                  setSearchText("")
                 }}
               >
                 Clear Filters
@@ -444,7 +540,7 @@ const SendCampaign = ({ onCreate }: { onCreate?: () => void }) => {
                     onChange={(e) => toggleSelectAll(e.target.checked)}
                   />
                   <Label htmlFor="selectAll" className="font-semibold text-sm">
-                    Select All ({users.length})
+                   Select All ({filteredUsers.length})
                   </Label>
                 </div>
 

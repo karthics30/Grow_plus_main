@@ -21,11 +21,18 @@ import { format } from "date-fns";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Dialog,
+  DialogTrigger,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
+  DialogHeader
+} from "@/components/ui/dialog"
+
+import { DateRange } from "react-day-picker";
+
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+
 
 interface SendLog {
   id: number;
@@ -60,7 +67,58 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [selectedReply, setSelectedReply] = useState<ReplyData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
   const { toast } = useToast();
+
+
+const exportCSV = (data: SendLog[]) => {
+  const csvRows = [];
+
+  // CSV Header
+  csvRows.push([
+    "ID",
+    "Recipient",
+    "Status",
+    "Subject",
+    "Open Count",
+    "Sent At",
+    "Reply From",
+    "Reply Subject",
+    "Reply Received At",
+    "Reply Body"
+  ].join(","));
+
+  // Data Rows
+  data.forEach((log) => {
+    const reply = findReplyMatch(log.recipient, log.subject);
+
+    csvRows.push([
+      log.id,
+      log.recipient,
+      log.openCount > 1 ? "SEEN" : "SENT",
+      `"${log.subject}"`,
+      log.openCount,
+      log.sentAt,
+      reply ? `"${reply.from}"` : "",
+      reply ? `"${reply.subject}"` : "",
+      reply ? `"${reply.receivedAt}"` : "",
+      reply ? `"${reply.bodyText?.replace(/\n/g, " ").replace(/"/g, "'")}"` : ""
+    ].join(","));
+  });
+
+  const csv = csvRows.join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "campaign_logs_with_replies.csv";
+  link.click();
+};
+
+
+
 
   useEffect(() => {
     if (id) {
@@ -142,15 +200,131 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
     }
   };
 
+const normalizeRange = (range: DateRange | undefined) => {
+  if (!range?.from || !range?.to) return range;
+
+  const from = new Date(range.from);
+  from.setHours(0, 0, 0, 0);
+
+  const to = new Date(range.to);
+  to.setHours(23, 59, 59, 999);
+
+  return { from, to };
+};
+
+
+
+const normalized = normalizeRange(dateRange);
+
+const filteredLogs = logs.filter((log) => {
+  if (!normalized?.from || !normalized?.to) return true;
+
+  const sentDate = new Date(log.sentAt);
+
+  return sentDate >= normalized.from && sentDate <= normalized.to;
+});
+
+
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
-        <Button
-          onClick={() => navigate(-1)}
-          className="mb-4 flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Campaigns
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+  {/* Back Button */}
+  <Button
+    onClick={() => navigate(-1)}
+    className="flex items-center gap-2"
+  >
+    <ArrowLeft className="w-4 h-4" /> Back to Campaigns
+  </Button>
+
+  <div className="flex items-center gap-3">
+
+<Dialog>
+  <DialogTrigger asChild>
+    <Button
+      variant="outline"
+      className="flex items-center gap-2 rounded-lg px-4 py-2 border w-full sm:w-auto"
+    >
+      <CalendarIcon className="w-4 h-4" />
+      {dateRange?.from && dateRange?.to
+        ? `${format(dateRange.from, "dd MMM")} - ${format(dateRange.to, "dd MMM")}`
+        : "Select Date Range"}
+    </Button>
+  </DialogTrigger>
+
+  <DialogContent className="w-[95vw] max-w-lg p-6 rounded-2xl">
+    <DialogHeader className="mb-3">
+      <DialogTitle className="text-xl font-semibold">Filter by Date</DialogTitle>
+    </DialogHeader>
+
+    {/* Calendar Container */}
+    <div className="rounded-lg border p-4 flex justify-center">
+      <Calendar
+        mode="range"
+        selected={dateRange}
+        onSelect={setDateRange}
+        numberOfMonths={1}
+        className="rounded-lg"
+      />
+    </div>
+
+    {/* Filter Buttons */}
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">
+      <Button
+        variant="secondary"
+        onClick={() => {
+          const today = new Date();
+          const from = new Date(today);
+          from.setHours(0, 0, 0, 0);
+          const to = new Date(today);
+          to.setHours(23, 59, 59, 999);
+          setDateRange({ from, to });
+        }}
+      >
+        Today
+      </Button>
+
+      <Button
+        variant="secondary"
+        onClick={() => {
+          const today = new Date();
+          const lastWeek = new Date();
+          lastWeek.setDate(today.getDate() - 7);
+          setDateRange({ from: lastWeek, to: today });
+        }}
+      >
+        Last 7 Days
+      </Button>
+
+      <Button
+        variant="secondary"
+        onClick={() => {
+          const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+          const end = new Date();
+          setDateRange({ from: start, to: end });
+        }}
+      >
+        This Month
+      </Button>
+
+      <Button variant="destructive" onClick={() => setDateRange(null)}>
+        Clear
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
+ {/* Export Button */}
+    <Button
+      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+      onClick={() => exportCSV(filteredLogs)}
+    >
+      Export CSV
+    </Button>
+
+  </div>
+</div>
+
 
         <div className="flex justify-between items-center">
           {/* <h1 className="text-3xl font-bold">Campaign Logs</h1> */}
@@ -182,15 +356,15 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
                     <TableHead>Status</TableHead>
                     <TableHead>Template</TableHead>
                     <TableHead>Subject</TableHead>
-                    <TableHead>Seen</TableHead>
-                    <TableHead>First Opened</TableHead>
-                    <TableHead>Last Opened</TableHead>
+                    {/* <TableHead>Seen</TableHead> */}
+                    {/* <TableHead>First Opened</TableHead>
+                    <TableHead>Last Opened</TableHead> */}
                     <TableHead>Sent At</TableHead>
                     <TableHead>Reply</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs.map((log) => {
+                  {filteredLogs.map((log) => {
                     const matchedReply = findReplyMatch(
                       log.recipient,
                       log.subject
@@ -201,19 +375,19 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
                         <TableCell>{log.id}</TableCell>
                         <TableCell>{log.recipient}</TableCell>
                         <TableCell>
-                          <span
-                            className={`px-2 py-1 text-xs rounded ${
-                              log.status === "SENT"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {log.status}
-                          </span>
+                        <span
+  className={`px-2 py-1 text-xs rounded ${
+    log.openCount > 1
+      ? "bg-blue-100 text-blue-700"
+      : "bg-green-100 text-green-700"
+  }`}
+>
+  {log.openCount > 1 ? "SEEN" : "SENT"}
+</span>
                         </TableCell>
                         <TableCell>{log.templateName}</TableCell>
                         <TableCell>{log.subject}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           {log.openCount > 1 ? (
                             <span className="text-green-600 font-medium">
                               Seen
@@ -223,9 +397,9 @@ const SendCampaignList = ({ onCreate }: { onCreate?: () => void }) => {
                               Not Seen
                             </span>
                           )}
-                        </TableCell>
-                        <TableCell>{formatDate(log.firstOpenedAt)}</TableCell>
-                        <TableCell>{formatDate(log.lastOpenedAt)}</TableCell>
+                        </TableCell> */}
+                        {/* <TableCell>{formatDate(log.firstOpenedAt)}</TableCell>
+                        <TableCell>{formatDate(log.lastOpenedAt)}</TableCell> */}
                         <TableCell>{formatDate(log.sentAt)}</TableCell>
                         <TableCell>
                           {matchedReply ? (
