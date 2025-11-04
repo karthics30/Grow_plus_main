@@ -6,6 +6,8 @@ import RecipientsPreview from "./RecipientsPreview";
 import SendOptions from "./SendOptions";
 import { TimeWindowConfig, DEFAULT_TIME_WINDOW } from "./TimeWindowPicker";
 
+const BASE_URL = import.meta.env.VITE_APP_BASEURL;
+
 export type BatchSummary = {
   id: string;
   name: string;
@@ -26,7 +28,8 @@ type Props = {
 type WhenToSend = "now" | "schedule";
 
 const uuid = () =>
-  (globalThis.crypto?.randomUUID?.() ?? `b_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+  globalThis.crypto?.randomUUID?.() ??
+  `b_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 const BatchCallDrawer: React.FC<Props> = ({ open, onClose, onCreated }) => {
   // ===== defaults / reset helper =====
@@ -50,28 +53,51 @@ const BatchCallDrawer: React.FC<Props> = ({ open, onClose, onCreated }) => {
   const [batchName, setBatchName] = useState(defaults.batchName);
   const [fromNumber, setFromNumber] = useState(defaults.fromNumber);
   const fromNumberOptions = useMemo(
-    () => ["+15512821255 (GroPlus)", "+12135551234 (Sales)", "+447700900123 (UK Line)"],
+    () => [
+      "+15512821255 (GroPlus)",
+      "+12135551234 (Sales)",
+      "+447700900123 (UK Line)",
+    ],
     []
   );
-  const [timeWindowCfg, setTimeWindowCfg] = useState<TimeWindowConfig>(defaults.timeWindowCfg);
+  const [timeWindowCfg, setTimeWindowCfg] = useState<TimeWindowConfig>(
+    defaults.timeWindowCfg
+  );
 
   const [rows, setRows] = useState<RecipientRow[]>(defaults.rows);
   const recipientsCount = rows.length;
   const allValid = recipientsCount > 0 && rows.every((r) => r._valid);
 
   const [whenToSend, setWhenToSend] = useState<WhenToSend>(defaults.whenToSend);
-  const [scheduledDateTime, setScheduledDateTime] = useState<string>(defaults.scheduledDateTime);
-  // @ts-ignore
-  const tzOptions = (typeof Intl.supportedValuesOf === "function" && Intl.supportedValuesOf("timeZone")) ||
-    (["UTC", "America/New_York", "Europe/London", "Asia/Kolkata", "Asia/Singapore", "Asia/Tokyo"] as string[]);
+  const [scheduledDateTime, setScheduledDateTime] = useState<string>(
+    defaults.scheduledDateTime
+  );
+  const tzOptions =
+    (typeof Intl.supportedValuesOf === "function" &&
+      Intl.supportedValuesOf("timeZone")) ||
+    ([
+      "UTC",
+      "America/New_York",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Singapore",
+      "Asia/Tokyo",
+    ] as string[]);
   const [timezone, setTimezone] = useState<string>(defaults.timezone);
 
-  const [reservedOtherCalls, setReservedOtherCalls] = useState<number>(defaults.reservedOtherCalls);
-  const [batchConcurrency, setBatchConcurrency] = useState<number>(defaults.batchConcurrency);
+  const [reservedOtherCalls, setReservedOtherCalls] = useState<number>(
+    defaults.reservedOtherCalls
+  );
+  const [batchConcurrency, setBatchConcurrency] = useState<number>(
+    defaults.batchConcurrency
+  );
 
   // Derived
-  const canSend = batchName.trim().length > 0 && recipientsCount > 0 && allValid;
-  const estMinutes = Math.ceil((recipientsCount * 5) / Math.max(1, batchConcurrency));
+  const canSend =
+    batchName.trim().length > 0 && recipientsCount > 0 && allValid;
+  const estMinutes = Math.ceil(
+    (recipientsCount * 5) / Math.max(1, batchConcurrency)
+  );
 
   // Modals
   const [showError, setShowError] = useState(false);
@@ -92,36 +118,136 @@ const BatchCallDrawer: React.FC<Props> = ({ open, onClose, onCreated }) => {
 
   const handleSaveDraft = () => setShowError(true);
 
-  const actuallySend = () => {
-    // Build payload (if you POST, do it here)
+  // const actuallySend = () => {
+  //   // Build payload (if you POST, do it here)
+  //   const payload = {
+  //     batchName,
+  //     fromNumber,
+  //     whenToSend,
+  //     scheduledAt: whenToSend === "schedule" ? { datetimeLocal: scheduledDateTime, timezone } : null,
+  //     timeWindow: timeWindowCfg,
+  //     reservedOtherCalls,
+  //     batchConcurrency,
+  //     recipients: rows.map(({ _valid, id, ...rest }) => rest),
+  //   };
+  //   console.log("SEND BATCH:", payload);
+
+  //   // Create summary for the parent page
+  //   const summary: BatchSummary = {
+  //     id: uuid(),
+  //     name: batchName,
+  //     status: whenToSend === "schedule" ? "Scheduled" : "Sending",
+  //     recipients: recipientsCount,
+  //     sent: 0,
+  //     pickedUp: 0,
+  //     successful: 0,
+  //     createdAt: new Date().toISOString(),
+  //   };
+  //   onCreated(summary);
+
+  //   // Reset state and close
+  //   resetForm();
+  //   onClose();
+  // };
+
+  // const actuallySend = async () => {
+  //   const payload = {
+  //     batchName,
+  //     fromNumber,
+  //     whenToSend,
+  //     scheduledAt:
+  //       whenToSend === "schedule"
+  //         ? { datetimeLocal: scheduledDateTime, timezone }
+  //         : null,
+  //     timeWindow: timeWindowCfg,
+  //     reservedOtherCalls,
+  //     batchConcurrency,
+  //     recipients: rows.map(({ _valid, id, ...rest }) => rest),
+  //   };
+
+  //   try {
+  //     const res = await fetch(`${BASE_URL}retell/start-batch-call`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(payload),
+  //     });
+
+  //     const data = await res.json();
+  //     console.log("✅ Batch call initiated:", data);
+
+  //     // Create local summary for UI
+  //     const summary: BatchSummary = {
+  //       id: uuid(),
+  //       name: batchName,
+  //       status: whenToSend === "schedule" ? "Scheduled" : "Sending",
+  //       recipients: recipientsCount,
+  //       sent: 0,
+  //       pickedUp: 0,
+  //       successful: 0,
+  //       createdAt: new Date().toISOString(),
+  //     };
+  //     onCreated(summary);
+
+  //     resetForm();
+  //     onClose();
+  //   } catch (error) {
+  //     console.error("❌ Error starting batch call:", error);
+  //   }
+  // };
+
+  const actuallySend = async () => {
+    // Transform recipients → tasks
+    const tasks = rows.map(({ _valid, id, phone_number, ...rest }) => ({
+      to_number: phone_number, // ✅ rename to API's required field
+      metadata: { ...rest }, // ✅ put all other fields under metadata
+    }));
+
     const payload = {
       batchName,
       fromNumber,
       whenToSend,
-      scheduledAt: whenToSend === "schedule" ? { datetimeLocal: scheduledDateTime, timezone } : null,
+      scheduledAt:
+        whenToSend === "schedule"
+          ? { datetimeLocal: scheduledDateTime, timezone }
+          : null,
       timeWindow: timeWindowCfg,
       reservedOtherCalls,
       batchConcurrency,
-      recipients: rows.map(({ _valid, id, ...rest }) => rest),
+      tasks, // ✅ correct key for Retell API
     };
-    console.log("SEND BATCH:", payload);
 
-    // Create summary for the parent page
-    const summary: BatchSummary = {
-      id: uuid(),
-      name: batchName,
-      status: whenToSend === "schedule" ? "Scheduled" : "Sending",
-      recipients: recipientsCount,
-      sent: 0,
-      pickedUp: 0,
-      successful: 0,
-      createdAt: new Date().toISOString(),
-    };
-    onCreated(summary);
+    try {
+      const res = await fetch(`${BASE_URL}retell/start-batch-call`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    // Reset state and close
-    resetForm();
-    onClose();
+      const data = await res.json();
+      console.log("✅ Batch call initiated:", data);
+
+      // Create local summary for UI
+      const summary: BatchSummary = {
+        id: uuid(),
+        name: batchName,
+        status: whenToSend === "schedule" ? "Scheduled" : "Sending",
+        recipients: rows.length,
+        sent: 0,
+        pickedUp: 0,
+        successful: 0,
+        createdAt: new Date().toISOString(),
+      };
+      onCreated(summary);
+
+      resetForm();
+      onClose();
+    } catch (error) {
+      console.error("❌ Error starting batch call:", error);
+    }
   };
 
   const handleSend = () => setShowConfirm(true);
@@ -145,9 +271,20 @@ const BatchCallDrawer: React.FC<Props> = ({ open, onClose, onCreated }) => {
       <div className="flex items-center justify-between px-6 h-14 border-b">
         <div className="flex items-center gap-2">
           <span className="font-medium">Create a batch call</span>
-          <span className="text-xs text-muted-foreground">• Batch call cost $0.005 per dial</span>
+          <span className="text-xs text-muted-foreground">
+            • Batch call cost $0.005 per dial
+          </span>
         </div>
-        <Button variant="ghost" size="icon" className="rounded-full" onClick={() => { resetForm(); onClose(); }} aria-label="Close">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+          onClick={() => {
+            resetForm();
+            onClose();
+          }}
+          aria-label="Close"
+        >
           <X className="w-5 h-5" />
         </Button>
       </div>
@@ -235,13 +372,20 @@ const BatchCallDrawer: React.FC<Props> = ({ open, onClose, onCreated }) => {
       {/* Error modal */}
       {showError && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowError(false)} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowError(false)}
+          />
           <div className="relative bg-background rounded-xl shadow-xl border w-[520px] p-6">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">!</div>
+              <div className="h-9 w-9 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                !
+              </div>
               <div className="flex-1">
                 <div className="font-semibold mb-1">Error</div>
-                <div className="text-sm text-muted-foreground">Invalid task provided</div>
+                <div className="text-sm text-muted-foreground">
+                  Invalid task provided
+                </div>
               </div>
             </div>
             <div className="mt-6 flex justify-end">
@@ -256,14 +400,22 @@ const BatchCallDrawer: React.FC<Props> = ({ open, onClose, onCreated }) => {
       {/* Confirm modal */}
       {showConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowConfirm(false)} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowConfirm(false)}
+          />
           <div className="relative bg-background rounded-xl shadow-xl border w-[520px] p-6">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">!</div>
+              <div className="h-9 w-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                !
+              </div>
               <div className="flex-1">
-                <div className="font-semibold mb-1">Schedule calls to send?</div>
+                <div className="font-semibold mb-1">
+                  Schedule calls to send?
+                </div>
                 <div className="text-sm text-muted-foreground">
-                  You are about to schedule calls to be sent to {recipientsCount} recipients .
+                  You are about to schedule calls to be sent to{" "}
+                  {recipientsCount} recipients .
                 </div>
               </div>
             </div>
