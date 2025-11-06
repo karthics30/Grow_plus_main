@@ -83,26 +83,111 @@ interface SavedRecord {
 
 const COUNTRY_CODES = [
   { code: "+1", country: "US/Canada" },
-  { code: "+44", country: "UK" },
-  { code: "+91", country: "India" },
-  { code: "+61", country: "Australia" },
-  { code: "+81", country: "Japan" },
-  { code: "+86", country: "China" },
-  { code: "+49", country: "Germany" },
-  { code: "+33", country: "France" },
-  { code: "+39", country: "Italy" },
-  { code: "+34", country: "Spain" },
-  { code: "+7", country: "Russia" },
-  { code: "+55", country: "Brazil" },
-  { code: "+52", country: "Mexico" },
+  { code: "+7", country: "Russia/Kazakhstan" },
+  { code: "+20", country: "Egypt" },
   { code: "+27", country: "South Africa" },
-  { code: "+82", country: "South Korea" },
-  { code: "+65", country: "Singapore" },
-  { code: "+971", country: "UAE" },
-  { code: "+966", country: "Saudi Arabia" },
+  { code: "+30", country: "Greece" },
   { code: "+31", country: "Netherlands" },
+  { code: "+32", country: "Belgium" },
+  { code: "+33", country: "France" },
+  { code: "+34", country: "Spain" },
+  { code: "+36", country: "Hungary" },
+  { code: "+39", country: "Italy" },
+  { code: "+40", country: "Romania" },
+  { code: "+41", country: "Switzerland" },
+  { code: "+43", country: "Austria" },
+  { code: "+44", country: "UK" },
+  { code: "+45", country: "Denmark" },
   { code: "+46", country: "Sweden" },
+  { code: "+47", country: "Norway" },
+  { code: "+48", country: "Poland" },
+  { code: "+49", country: "Germany" },
+  { code: "+51", country: "Peru" },
+  { code: "+52", country: "Mexico" },
+  { code: "+53", country: "Cuba" },
+  { code: "+54", country: "Argentina" },
+  { code: "+55", country: "Brazil" },
+  { code: "+56", country: "Chile" },
+  { code: "+57", country: "Colombia" },
+  { code: "+58", country: "Venezuela" },
+  { code: "+60", country: "Malaysia" },
+  { code: "+61", country: "Australia" },
+  { code: "+62", country: "Indonesia" },
+  { code: "+63", country: "Philippines" },
+  { code: "+64", country: "New Zealand" },
+  { code: "+65", country: "Singapore" },
+  { code: "+66", country: "Thailand" },
+  { code: "+81", country: "Japan" },
+  { code: "+82", country: "South Korea" },
+  { code: "+84", country: "Vietnam" },
+  { code: "+86", country: "China" },
+  { code: "+90", country: "Turkey" },
+  { code: "+91", country: "India" },
+  { code: "+92", country: "Pakistan" },
+  { code: "+93", country: "Afghanistan" },
+  { code: "+94", country: "Sri Lanka" },
+  { code: "+95", country: "Myanmar" },
+  { code: "+98", country: "Iran" },
+  { code: "+211", country: "South Sudan" },
+  { code: "+212", country: "Morocco" },
+  { code: "+213", country: "Algeria" },
+  { code: "+216", country: "Tunisia" },
+  { code: "+218", country: "Libya" },
+  { code: "+220", country: "Gambia" },
+  { code: "+221", country: "Senegal" },
+  { code: "+222", country: "Mauritania" },
+  { code: "+223", country: "Mali" },
+  { code: "+224", country: "Guinea" },
+  { code: "+225", country: "Ivory Coast" },
+  { code: "+226", country: "Burkina Faso" },
+  { code: "+227", country: "Niger" },
+  { code: "+228", country: "Togo" },
+  { code: "+229", country: "Benin" },
+  { code: "+230", country: "Mauritius" },
+  { code: "+231", country: "Liberia" },
+  { code: "+232", country: "Sierra Leone" },
+  { code: "+233", country: "Ghana" },
+  { code: "+234", country: "Nigeria" },
+  { code: "+235", country: "Chad" },
+  { code: "+236", country: "Central African Republic" },
+  { code: "+237", country: "Cameroon" },
+  { code: "+238", country: "Cape Verde" },
+  { code: "+239", country: "Sao Tome and Principe" },
+  { code: "+240", country: "Equatorial Guinea" },
+  { code: "+241", country: "Gabon" },
+  { code: "+242", country: "Congo" },
+  { code: "+243", country: "DR Congo" },
+  { code: "+244", country: "Angola" },
+  { code: "+245", country: "Guinea-Bissau" },
+  { code: "+246", country: "Diego Garcia" },
+  { code: "+248", country: "Seychelles" },
+  { code: "+249", country: "Sudan" },
+  { code: "+250", country: "Rwanda" },
+  { code: "+251", country: "Ethiopia" },
+  { code: "+252", country: "Somalia" },
+  { code: "+253", country: "Djibouti" },
+  { code: "+254", country: "Kenya" },
+  { code: "+255", country: "Tanzania" },
+  { code: "+256", country: "Uganda" },
+  { code: "+257", country: "Burundi" },
+  { code: "+258", country: "Mozambique" },
+  { code: "+260", country: "Zambia" },
+  { code: "+261", country: "Madagascar" },
+  { code: "+262", country: "Reunion" },
+  { code: "+263", country: "Zimbabwe" },
+  { code: "+264", country: "Namibia" },
+  { code: "+265", country: "Malawi" },
+  { code: "+266", country: "Lesotho" },
+  { code: "+267", country: "Botswana" },
+  { code: "+268", country: "Swaziland" },
+  { code: "+269", country: "Comoros" },
+  { code: "+290", country: "Saint Helena" },
+  { code: "+291", country: "Eritrea" },
+  { code: "+297", country: "Aruba" },
+  { code: "+298", country: "Faroe Islands" },
+  { code: "+299", country: "Greenland" }
 ];
+
 
 const Contacts = () => {
   const { toast } = useToast();
@@ -309,17 +394,27 @@ const companyFilteredSources = selectedCompany !== "all"
         body: JSON.stringify(cleanedData),
       });
 
-      if (!response.ok) throw new Error("Failed to create contact");
+      if (!response.ok) {
+          const responseData = await response.json(); // Parse the JSON response
+  toast({
+    variant: "destructive",
+    title: "Error",
+    description: responseData.message || "An unexpected error occurred", // Fallback message
+  });
+} else{
 
-      toast({
-        title: "Success",
-        description: "Contact created successfully",
-      });
+  toast({
+    title: "Success",
+    description: "Contact created successfully",
+  });
+}
+ 
 
       setIsAddDialogOpen(false);
       resetForm();
       fetchContacts();
     } catch (error) {
+      console.log(error,'hihihihicre')
       toast({
         variant: "destructive",
         title: "Error",
@@ -388,12 +483,21 @@ const companyFilteredSources = selectedCompany !== "all"
         }
       );
 
-      if (!response.ok) throw new Error("Failed to update contact");
+   
+      if (!response.ok) {
+          const responseData = await response.json(); // Parse the JSON response
+  toast({
+    variant: "destructive",
+    title: "Error",
+    description: responseData.message || "An unexpected error occurred", // Fallback message
+  });
+} else{
 
-      toast({
-        title: "Success",
-        description: "Contact updated successfully",
-      });
+  toast({
+    title: "Success",
+    description: "Contact created successfully",
+  });
+}
 
       setIsEditDialogOpen(false);
       setIsViewDialogOpen(false);

@@ -57,7 +57,7 @@ interface Template {
 const Dashboard = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<number | null>(null);
+const [selectedCampaign, setSelectedCampaign] = useState<number | null>(null);
   const [selectedCampaignFilter, setSelectedCampaignFilter] = useState<
     number | ""
   >("");
@@ -89,6 +89,7 @@ const Dashboard = () => {
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false);
   const [isViewCampaignsOpen, setIsViewCampaignsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
 
   const fetchTemplates = async (campaignId?: number) => {
     // ✅ no campaign selected → clear data
@@ -152,7 +153,18 @@ const Dashboard = () => {
       formData.append("subject", newTemplate.subject);
 
       // 💡 FIX: Removed .replace(/\n/g, "<br/>") - use clean HTML from draftToHtml
-      formData.append("html", newTemplate.html);
+      // formData.append("html", newTemplate.html);
+let html = draftToHtml(convertToRaw(editorState.getCurrentContent()));
+html = html
+  .replace(/<\/p><p>/g, "</p><p style='margin:0 0 10px 0;'>")
+  .replace(/\n/g, "<br />");
+
+formData.append("html", html);
+
+
+
+
+
 
       // ✅ campaignId now sent in body instead of URL param
       formData.append("campaignId", String(selectedCampaign));
@@ -250,13 +262,23 @@ const Dashboard = () => {
     formData.append("subject", editData.subject);
 
     // 💡 FIX: Removed .replace(/\n/g, "<br/>") - use clean HTML from draftToHtml
-    formData.append("html", editData.html);
+  let html = draftToHtml(convertToRaw(editEditorState.getCurrentContent()));
+html = html
+  .replace(/<\/p><p>/g, "</p><p style='margin:0 0 10px 0;'>")
+  .replace(/\n/g, "<br />");
+
+formData.append("html", html);
+
 
     formData.append("campaignId", String(selectedCampaign));
 
-    if (editData.attachments.length > 0) {
+    if (editData.attachments.length > 0 ) {
       editData.attachments.forEach((file) =>
         formData.append("attachments", file)
+      );
+    }else {
+      editData.attachments.forEach((file) =>
+        formData.append("attachments", null)
       );
     }
 
@@ -765,7 +787,6 @@ const Dashboard = () => {
                         {template.subject}
                       </CardDescription> */}
                     </CardHeader>
-
                     <CardContent className="space-y-3">
                       {/* 👁 Preview */}
                       <Dialog>
@@ -790,11 +811,11 @@ const Dashboard = () => {
 
                           {/* HTML Preview */}
                           <div
-                            className="border rounded-lg p-4 bg-muted/30 mb-4"
-                            dangerouslySetInnerHTML={{
-                              __html: previewTemplate?.html || "",
-                            }}
-                          />
+  className="border rounded-lg p-4 bg-muted/30 mb-4"
+  style={{ whiteSpace: "pre-wrap" }}
+  dangerouslySetInnerHTML={{ __html: previewTemplate?.html || "" }}
+/>
+
 
                           {/* Image Attachments */}
                           {previewTemplate?.attachments &&
@@ -808,10 +829,10 @@ const Dashboard = () => {
                                     (file: any, index: number) => {
                                       // Assuming your file structure and serving setup are correct for this path
                                       const imageUrl = `${
-                                        import.meta.env.VITE_API_BASE_URL
-                                      }/templates/${file.filename}`;
+                                        import.meta.env.VITE_HOST
+                                      }${file.path}`;
 
-                                      return (
+                                      return (  
                                         <div
                                           key={index}
                                           className="border rounded-lg p-2 bg-white shadow-sm flex flex-col items-center"
@@ -984,6 +1005,34 @@ const Dashboard = () => {
               {/* Attachments */}
               <div className="space-y-2">
                 <Label htmlFor="edit-attachments">Attachments</Label>
+                {editTemplate?.attachments && editTemplate.attachments.length > 0 && (
+  <div className="space-y-2 mb-3">
+    <Label>Existing Attachments</Label>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {editTemplate.attachments.map((file: any, index: number) => {
+        const imageUrl = `${import.meta.env.VITE_HOST}${file.path}`;
+        return (
+          <div
+            key={index}
+            className="relative border rounded-lg p-2 bg-white shadow-sm flex flex-col items-center group"
+          >
+            <img
+              src={imageUrl}
+              alt={file.originalName}
+              className="max-h-40 object-contain rounded-md cursor-pointer"
+              onClick={() => document.getElementById("edit-attachments")?.click()}
+            />
+
+            <p className="text-xs mt-2 text-muted-foreground text-center break-all">
+              {file.originalName}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
+
                 <Input
                   id="edit-attachments"
                   type="file"

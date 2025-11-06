@@ -213,19 +213,19 @@ export default function EmailCampaignDashboard({
               <div className="grid grid-cols-4 gap-4 mb-6">
                 <StatCard
                   icon={<Mail className="w-5 h-5 text-primary" />}
-                  label="Sent"
+                  label="SENT"
                   value={campaign.sent}
                   bg="primary"
                 />
                 <StatCard
                   icon={<Eye className="w-5 h-5 text-success" />}
-                  label="Opened"
+                  label="READ"
                   value={campaign.opened}
                   bg="success"
                 />
                 <StatCard
                   icon={<Sparkles className="w-5 h-5 text-accent" />}
-                  label="Clicked"
+                  label="REPLIED"
                   value={campaign.clicked}
                   bg="accent"
                 />
