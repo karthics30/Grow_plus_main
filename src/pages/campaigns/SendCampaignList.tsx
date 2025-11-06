@@ -375,15 +375,31 @@ const filteredLogs = logs.filter((log) => {
                         <TableCell>{log.id}</TableCell>
                         <TableCell>{log.recipient}</TableCell>
                         <TableCell>
-                        <span
+  <span
   className={`px-2 py-1 text-xs rounded ${
-    log.openCount > 1
-      ? "bg-blue-100 text-blue-700"
-      : "bg-green-100 text-green-700"
+    matchedReply
+      ? "bg-yellow-100 text-yellow-700" // REPLAYED
+      : log.openCount >= 1
+      ? "bg-blue-100 text-blue-700" // SEEN
+      : log.status === "SENT"
+      ? "bg-green-100 text-green-700" // SENT
+      : log.status === "FAILED"
+      ? "bg-red-100 text-red-700" // FAILED
+      : "bg-gray-100 text-gray-700" // default/empty
   }`}
 >
-  {log.openCount > 1 ? "SEEN" : "SENT"}
+  {matchedReply
+    ? "REPLIED"
+    : log.openCount >= 1
+    ? "READ"
+    : log.status === "SENT"
+    ? "SENT"
+    : log.status === "FAILED"
+    ? "FAILED"
+    : ""}
 </span>
+
+
                         </TableCell>
                         <TableCell>{log.templateName}</TableCell>
                         <TableCell>{log.subject}</TableCell>

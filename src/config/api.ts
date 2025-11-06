@@ -1,8 +1,8 @@
 // API Configuration
 // Update this URL to match your backend server
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
-
+  import.meta.env.VITE_API_BASE_URL || "https://lynksapp.co.in/api";
+ 
 export const API_ENDPOINTS = {
   createTemplate: `${API_BASE_URL}/campaign/template`,
   listTemplates: `${API_BASE_URL}/campaign/templates`,
